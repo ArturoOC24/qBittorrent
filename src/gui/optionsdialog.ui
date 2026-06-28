@@ -1061,6 +1061,26 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="checkSequentialDefault">
+                 <property name="toolTip">
+                  <string>Download pieces in sequential order by default</string>
+                 </property>
+                 <property name="text">
+                  <string>Download in sequential order by default</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="checkFirstLastDefault">
+                 <property name="toolTip">
+                  <string>Prioritize downloading the first and last pieces of each file by default</string>
+                 </property>
+                 <property name="text">
+                  <string>Download first and last pieces first by default</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <layout class="QHBoxLayout" name="stopConditionLayout">
                  <item>
                   <widget class="QLabel" name="stopConditionLabel">

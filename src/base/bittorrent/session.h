@@ -217,6 +217,10 @@ namespace BitTorrent
         virtual void setAddTorrentToQueueTop(bool value) = 0;
         virtual bool isAddTorrentStopped() const = 0;
         virtual void setAddTorrentStopped(bool value) = 0;
+        virtual bool isSequentialDownloadDefault() const = 0;
+        virtual void setSequentialDownloadDefault(bool value) = 0;
+        virtual bool isFirstLastPiecePriorityDefault() const = 0;
+        virtual void setFirstLastPiecePriorityDefault(bool value) = 0;
         virtual Torrent::StopCondition torrentStopCondition() const = 0;
         virtual void setTorrentStopCondition(Torrent::StopCondition stopCondition) = 0;
         virtual TorrentContentLayout torrentContentLayout() const = 0;

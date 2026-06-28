@@ -525,6 +525,8 @@ SessionImpl::SessionImpl(QObject *parent)
         , NO_SEEDING_TIME_LIMIT, lowerLimited(NO_SEEDING_TIME_LIMIT))
     , m_isAddTorrentToQueueTop(BITTORRENT_SESSION_KEY(u"AddTorrentToTopOfQueue"_s), false)
     , m_isAddTorrentStopped(BITTORRENT_SESSION_KEY(u"AddTorrentStopped"_s), false)
+    , m_isSequentialDownloadDefault(BITTORRENT_SESSION_KEY(u"SequentialDownloadDefault"_s), false)
+    , m_isFirstLastPiecePriorityDefault(BITTORRENT_SESSION_KEY(u"FirstLastPiecePriorityDefault"_s), false)
     , m_torrentStopCondition(BITTORRENT_SESSION_KEY(u"TorrentStopCondition"_s), Torrent::StopCondition::None)
     , m_torrentContentLayout(BITTORRENT_SESSION_KEY(u"TorrentContentLayout"_s), TorrentContentLayout::Original)
     , m_isAppendExtensionEnabled(BITTORRENT_SESSION_KEY(u"AddExtensionToIncompleteFiles"_s), false)
@@ -1286,6 +1288,26 @@ bool SessionImpl::isAddTorrentStopped() const
 void SessionImpl::setAddTorrentStopped(const bool value)
 {
     m_isAddTorrentStopped = value;
+}
+
+bool SessionImpl::isSequentialDownloadDefault() const
+{
+    return m_isSequentialDownloadDefault;
+}
+
+void SessionImpl::setSequentialDownloadDefault(const bool value)
+{
+    m_isSequentialDownloadDefault = value;
+}
+
+bool SessionImpl::isFirstLastPiecePriorityDefault() const
+{
+    return m_isFirstLastPiecePriorityDefault;
+}
+
+void SessionImpl::setFirstLastPiecePriorityDefault(const bool value)
+{
+    m_isFirstLastPiecePriorityDefault = value;
 }
 
 Torrent::StopCondition SessionImpl::torrentStopCondition() const
