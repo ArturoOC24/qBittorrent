@@ -2711,7 +2711,7 @@ LoadTorrentParams SessionImpl::initLoadTorrentParams(const AddTorrentParams &add
     LoadTorrentParams loadTorrentParams;
 
     loadTorrentParams.name = addTorrentParams.name;
-    loadTorrentParams.firstLastPiecePriority = addTorrentParams.firstLastPiecePriority;
+    loadTorrentParams.firstLastPiecePriority = addTorrentParams.firstLastPiecePriority || isFirstLastPiecePriorityDefault();
     loadTorrentParams.hasFinishedStatus = addTorrentParams.skipChecking; // do not react on 'torrent_finished_alert' when skipping
     loadTorrentParams.contentLayout = addTorrentParams.contentLayout.value_or(torrentContentLayout());
     loadTorrentParams.operatingMode = (addTorrentParams.addForced ? TorrentOperatingMode::Forced : TorrentOperatingMode::AutoManaged);
@@ -2960,7 +2960,7 @@ bool SessionImpl::addTorrent_impl(const TorrentDescriptor &source, const AddTorr
     // Preallocation mode
     p.storage_mode = isPreallocationEnabled() ? lt::storage_mode_allocate : lt::storage_mode_sparse;
 
-    if (addTorrentParams.sequential)
+    if (addTorrentParams.sequential || isSequentialDownloadDefault())
         p.flags |= lt::torrent_flags::sequential_download;
     else
         p.flags &= ~lt::torrent_flags::sequential_download;
