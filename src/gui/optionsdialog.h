@@ -135,12 +135,6 @@ private:
     void loadBittorrentTabOptions();
     void saveBittorrentTabOptions() const;
 
-    void loadRSSTabOptions();
-    void saveRSSTabOptions() const;
-
-    void loadSearchTabOptions();
-    void saveSearchTabOptions() const;
-
 #ifndef DISABLE_WEBUI
     void loadWebUITabOptions();
     void saveWebUITabOptions() const;

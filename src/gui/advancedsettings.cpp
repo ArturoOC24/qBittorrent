@@ -97,7 +97,6 @@ namespace
         REANNOUNCE_WHEN_ADDRESS_CHANGED,
         DOWNLOAD_TRACKER_FAVICON,
         SAVE_PATH_HISTORY_LENGTH,
-        ENABLE_SPEED_WIDGET,
 #ifndef Q_OS_MACOS
         ENABLE_ICONS_IN_MENUS,
         USE_ATTACHED_ADD_NEW_TORRENT_DIALOG,
@@ -335,7 +334,6 @@ void AdvancedSettings::saveAdvancedSettings() const
     // Misc GUI properties
     app()->mainWindow()->setDownloadTrackerFavicon(m_checkBoxTrackerFavicon.isChecked());
     pref->setAddNewTorrentDialogSavePathHistoryLength(m_spinBoxSavePathHistoryLength.value());
-    pref->setSpeedWidgetEnabled(m_checkBoxSpeedWidgetEnabled.isChecked());
 #ifndef Q_OS_MACOS
     pref->setIconsInMenusEnabled(m_checkBoxIconsInMenusEnabled.isChecked());
     pref->setAddNewTorrentDialogAttached(m_checkBoxAttachedAddNewTorrentDialog.isChecked());
@@ -872,9 +870,6 @@ void AdvancedSettings::loadAdvancedSettings()
     m_spinBoxSavePathHistoryLength.setRange(0, 99);
     m_spinBoxSavePathHistoryLength.setValue(pref->addNewTorrentDialogSavePathHistoryLength());
     addRow(SAVE_PATH_HISTORY_LENGTH, tr("Save path history length"), &m_spinBoxSavePathHistoryLength);
-    // Enable speed graphs
-    m_checkBoxSpeedWidgetEnabled.setChecked(pref->isSpeedWidgetEnabled());
-    addRow(ENABLE_SPEED_WIDGET, tr("Enable speed graphs"), &m_checkBoxSpeedWidgetEnabled);
 #ifndef Q_OS_MACOS
     // Enable icons in menus
     m_checkBoxIconsInMenusEnabled.setChecked(pref->iconsInMenusEnabled());

@@ -54,11 +54,7 @@ class OptionsDialog;
 class PowerManagement;
 class ProgramUpdater;
 class PropertiesWidget;
-class RSSWidget;
-class SearchWidget;
-class StatsDialog;
 class StatusBar;
-class TorrentCreatorDialog;
 class TransferListFiltersWidget;
 class TransferListWidget;
 
@@ -69,11 +65,6 @@ namespace MacUtils
     class StatusItem;
 }
 #endif
-
-namespace Net
-{
-    struct DownloadResult;
-}
 
 namespace Ui
 {
@@ -124,8 +115,6 @@ private slots:
     // Keyboard shortcuts
     void createKeyboardShortcuts();
     void displayTransferTab() const;
-    void displaySearchTab();
-    void displayRSSTab();
     void displayExecutionLogTab();
     void toggleFocusBetweenLineEdits();
     void loadSessionStats();
@@ -140,10 +129,7 @@ private slots:
     void downloadFromURLList(const QStringList &urlList);
     void updateAltSpeedsBtn(bool alternative);
     void updateNbTorrents();
-    void handleRSSUnreadCountUpdated(int count);
 
-    void on_actionSearchWidget_triggered();
-    void on_actionRSSReader_triggered();
     void on_actionSpeedInTitleBar_triggered();
     void on_actionTopToolBar_triggered();
     void on_actionShowStatusbar_triggered();
@@ -160,8 +146,6 @@ private slots:
     void on_actionAutoShutdown_toggled(bool);
     void on_actionAutoReboot_toggled(bool);
     void on_actionAbout_triggered();
-    void on_actionStatistics_triggered();
-    void on_actionCreateTorrent_triggered();
     void on_actionOptions_triggered();
     void on_actionSetGlobalSpeedLimits_triggered();
     void on_actionDocumentation_triggered() const;
@@ -183,9 +167,6 @@ private slots:
 #else
     void toggleVisibility();
 #endif
-#ifdef Q_OS_WIN
-    void pythonDownloadFinished(const Net::DownloadResult &result);
-#endif
 
 private:
     void populateDesktopIntegrationMenu();
@@ -194,19 +175,11 @@ private:
     void showEvent(QShowEvent *) override;
     void keyPressEvent(QKeyEvent *event) override;
     bool event(QEvent *e) override;
-    void displayRSSTab(bool enable);
-    void displaySearchTab(bool enable);
-    void createTorrentTriggered(const Path &path);
     void showStatusBar(bool show);
     void showFiltersSidebar(bool show);
     void applyTransferListFilter();
     void refreshWindowTitle();
     void refreshTrayIconTooltip();
-
-#ifdef Q_OS_WIN
-    void installPython();
-    bool verifyPythonInstaller(const Path &installerPath) const;
-#endif
 
     Ui::MainWindow *m_ui = nullptr;
 
@@ -222,8 +195,6 @@ private:
     QPointer<StatusBar> m_statusBar;
     QPointer<OptionsDialog> m_options;
     QPointer<AboutDialog> m_aboutDlg;
-    QPointer<StatsDialog> m_statsDlg;
-    QPointer<TorrentCreatorDialog> m_createTorrentDlg;
     QPointer<DownloadFromURLDialog> m_downloadFromURLDialog;
 
     QPointer<QMenu> m_trayIconMenu;
@@ -243,8 +214,6 @@ private:
     QAction *m_queueSeparator = nullptr;
     QAction *m_queueSeparatorMenu = nullptr;
     QSplitter *m_splitter = nullptr;
-    QPointer<SearchWidget> m_searchWidget;
-    QPointer<RSSWidget> m_rssWidget;
     QPointer<ExecutionLogWidget> m_executionLog;
     // Power Management
     PowerManagement *m_pwr = nullptr;

@@ -69,15 +69,6 @@ PropTabBar::PropTabBar(QWidget *parent)
     peersButton->setShortcut(Qt::ALT | Qt::Key_R);
     addWidget(peersButton);
     m_btnGroup->addButton(peersButton, PeersTab);
-    // URL seeds tab
-    QPushButton *URLSeedsButton = new QPushButton(
-#ifndef Q_OS_MACOS
-            UIThemeManager::instance()->getIcon(u"network-server"_s),
-#endif
-            tr("HTTP Sources"), parent);
-    URLSeedsButton->setShortcut(Qt::ALT | Qt::Key_B);
-    addWidget(URLSeedsButton);
-    m_btnGroup->addButton(URLSeedsButton, URLSeedsTab);
     // Files tab
     QPushButton *filesButton = new QPushButton(
 #ifndef Q_OS_MACOS
@@ -87,17 +78,6 @@ PropTabBar::PropTabBar(QWidget *parent)
     filesButton->setShortcut(Qt::ALT | Qt::Key_Z);
     addWidget(filesButton);
     m_btnGroup->addButton(filesButton, FilesTab);
-    // Spacer
-    addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Fixed));
-    // Speed tab
-    QPushButton *speedButton = new QPushButton(
-#ifndef Q_OS_MACOS
-            UIThemeManager::instance()->getIcon(u"chart-line"_s),
-#endif
-            tr("Speed"), parent);
-    speedButton->setShortcut(Qt::ALT | Qt::Key_D);
-    addWidget(speedButton);
-    m_btnGroup->addButton(speedButton, SpeedTab);
     // SIGNAL/SLOT
     connect(m_btnGroup, &QButtonGroup::idClicked
             , this, &PropTabBar::setCurrentIndex);
@@ -110,7 +90,7 @@ int PropTabBar::currentIndex() const
 
 void PropTabBar::setCurrentIndex(int index)
 {
-    if (index >= m_btnGroup->buttons().size())
+    if (!m_btnGroup->button(index))
         index = 0;
     // If asked to hide or if the currently selected tab is clicked
     if ((index < 0) || (m_currentIndex == index))

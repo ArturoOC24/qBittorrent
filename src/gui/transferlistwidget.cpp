@@ -65,7 +65,6 @@
 #include "speedlimitdialog.h"
 #include "torrentcategorydialog.h"
 #include "torrentcontentlayoutdialog.h"
-#include "torrentcreatordialog.h"
 #include "torrentoptionsdialog.h"
 #include "trackerentriesdialog.h"
 #include "transferlistdelegate.h"
@@ -1472,17 +1471,6 @@ void TransferListWidget::dropEvent(QDropEvent *event)
         return;
     }
 
-    // Create torrent
-    for (const QString &file : asConst(otherFiles))
-    {
-        auto torrentCreator = new TorrentCreatorDialog(this, Path(file));
-        torrentCreator->setAttribute(Qt::WA_DeleteOnClose);
-        torrentCreator->show();
-
-        // currently only handle the first entry
-        // this is a stub that can be expanded later to create many torrents at once
-        break;
-    }
 }
 
 void TransferListWidget::wheelEvent(QWheelEvent *event)

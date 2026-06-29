@@ -44,8 +44,7 @@ public:
         TrackersTab,
         PeersTab,
         URLSeedsTab,
-        FilesTab,
-        SpeedTab
+        FilesTab
     };
 
     explicit PropTabBar(QWidget *parent = nullptr);

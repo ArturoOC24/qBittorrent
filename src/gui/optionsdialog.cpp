@@ -54,8 +54,6 @@
 #include "base/net/smtpclient.h"
 #include "base/path.h"
 #include "base/preferences.h"
-#include "base/rss/rss_autodownloader.h"
-#include "base/rss/rss_session.h"
 #include "base/torrentfileguard.h"
 #include "base/torrentfileswatcher.h"
 #include "base/utils/apikey.h"
@@ -70,7 +68,6 @@
 #include "banlistoptionsdialog.h"
 #include "interfaces/iguiapplication.h"
 #include "ipsubnetwhitelistoptionsdialog.h"
-#include "rss/automatedrssdownloader.h"
 #include "ui_optionsdialog.h"
 #include "uithemedialog.h"
 #include "uithememanager.h"
@@ -172,8 +169,8 @@ OptionsDialog::OptionsDialog(IGUIApplication *app, QWidget *parent)
     m_ui->tabSelection->item(TAB_CONNECTION)->setIcon(UIThemeManager::instance()->getIcon(u"network-connect"_s, u"network-wired"_s));
     m_ui->tabSelection->item(TAB_DOWNLOADS)->setIcon(UIThemeManager::instance()->getIcon(u"download"_s, u"folder-download"_s));
     m_ui->tabSelection->item(TAB_SPEED)->setIcon(UIThemeManager::instance()->getIcon(u"speedometer"_s, u"chronometer"_s));
-    m_ui->tabSelection->item(TAB_RSS)->setIcon(UIThemeManager::instance()->getIcon(u"application-rss"_s, u"application-rss+xml"_s));
-    m_ui->tabSelection->item(TAB_SEARCH)->setIcon(UIThemeManager::instance()->getIcon(u"edit-find"_s));
+    m_ui->tabSelection->item(TAB_SEARCH)->setHidden(true);
+    m_ui->tabSelection->item(TAB_RSS)->setHidden(true);
 #ifdef DISABLE_WEBUI
     m_ui->tabSelection->item(TAB_WEBUI)->setHidden(true);
 #else
@@ -199,8 +196,6 @@ OptionsDialog::OptionsDialog(IGUIApplication *app, QWidget *parent)
     loadConnectionTabOptions();
     loadSpeedTabOptions();
     loadBittorrentTabOptions();
-    loadRSSTabOptions();
-    loadSearchTabOptions();
 #ifndef DISABLE_WEBUI
     loadWebUITabOptions();
 #endif
@@ -1324,70 +1319,6 @@ void OptionsDialog::saveBittorrentTabOptions() const
     session->setAdditionalTrackersURL(m_ui->textTrackersURL->text());
 }
 
-void OptionsDialog::loadRSSTabOptions()
-{
-    const auto *rssSession = RSS::Session::instance();
-    const auto *autoDownloader = RSS::AutoDownloader::instance();
-
-    m_ui->checkRSSEnable->setChecked(rssSession->isProcessingEnabled());
-    m_ui->spinRSSRefreshInterval->setValue(rssSession->refreshInterval());
-    m_ui->spinRSSFetchDelay->setValue(rssSession->fetchDelay().count());
-    m_ui->spinRSSMaxArticlesPerFeed->setValue(rssSession->maxArticlesPerFeed());
-    m_ui->checkRSSAutoDownloaderEnable->setChecked(autoDownloader->isProcessingEnabled());
-    m_ui->textSmartEpisodeFilters->setPlainText(autoDownloader->smartEpisodeFilters().join(u'\n'));
-    m_ui->checkSmartFilterDownloadRepacks->setChecked(autoDownloader->downloadRepacks());
-
-    connect(m_ui->checkRSSEnable, &QCheckBox::toggled, this, &OptionsDialog::enableApplyButton);
-    connect(m_ui->checkRSSAutoDownloaderEnable, &QCheckBox::toggled, this, &OptionsDialog::enableApplyButton);
-    connect(m_ui->btnEditRules, &QPushButton::clicked, this, [this]()
-    {
-        auto *downloader = new AutomatedRssDownloader(this);
-        downloader->setAttribute(Qt::WA_DeleteOnClose);
-        downloader->open();
-    });
-    connect(m_ui->textSmartEpisodeFilters, &QPlainTextEdit::textChanged, this, &OptionsDialog::enableApplyButton);
-    connect(m_ui->checkSmartFilterDownloadRepacks, &QCheckBox::toggled, this, &OptionsDialog::enableApplyButton);
-    connect(m_ui->spinRSSRefreshInterval, qSpinBoxValueChanged, this, &OptionsDialog::enableApplyButton);
-    connect(m_ui->spinRSSFetchDelay, qSpinBoxValueChanged, this, &OptionsDialog::enableApplyButton);
-    connect(m_ui->spinRSSMaxArticlesPerFeed, qSpinBoxValueChanged, this, &OptionsDialog::enableApplyButton);
-}
-
-void OptionsDialog::saveRSSTabOptions() const
-{
-    auto *rssSession = RSS::Session::instance();
-    auto *autoDownloader = RSS::AutoDownloader::instance();
-
-    rssSession->setProcessingEnabled(m_ui->checkRSSEnable->isChecked());
-    rssSession->setRefreshInterval(m_ui->spinRSSRefreshInterval->value());
-    rssSession->setFetchDelay(std::chrono::seconds(m_ui->spinRSSFetchDelay->value()));
-    rssSession->setMaxArticlesPerFeed(m_ui->spinRSSMaxArticlesPerFeed->value());
-    autoDownloader->setProcessingEnabled(m_ui->checkRSSAutoDownloaderEnable->isChecked());
-    autoDownloader->setSmartEpisodeFilters(m_ui->textSmartEpisodeFilters->toPlainText().split(u'\n', Qt::SkipEmptyParts));
-    autoDownloader->setDownloadRepacks(m_ui->checkSmartFilterDownloadRepacks->isChecked());
-}
-
-void OptionsDialog::loadSearchTabOptions()
-{
-    const auto *pref = Preferences::instance();
-
-    m_ui->groupStoreOpenedTabs->setChecked(pref->storeOpenedSearchTabs());
-    m_ui->checkStoreTabsSearchResults->setChecked(pref->storeOpenedSearchTabResults());
-    m_ui->searchHistoryLengthSpinBox->setValue(pref->searchHistoryLength());
-
-    connect(m_ui->groupStoreOpenedTabs, &QGroupBox::toggled, this, &OptionsDialog::enableApplyButton);
-    connect(m_ui->checkStoreTabsSearchResults, &QCheckBox::toggled, this, &OptionsDialog::enableApplyButton);
-    connect(m_ui->searchHistoryLengthSpinBox, qSpinBoxValueChanged, this, &OptionsDialog::enableApplyButton);
-}
-
-void OptionsDialog::saveSearchTabOptions() const
-{
-    auto *pref = Preferences::instance();
-
-    pref->setStoreOpenedSearchTabs(m_ui->groupStoreOpenedTabs->isChecked());
-    pref->setStoreOpenedSearchTabResults(m_ui->checkStoreTabsSearchResults->isChecked());
-    pref->setSearchHistoryLength(m_ui->searchHistoryLengthSpinBox->value());
-}
-
 #ifndef DISABLE_WEBUI
 void OptionsDialog::loadWebUITabOptions()
 {
@@ -1657,8 +1588,6 @@ void OptionsDialog::saveOptions() const
     saveConnectionTabOptions();
     saveSpeedTabOptions();
     saveBittorrentTabOptions();
-    saveRSSTabOptions();
-    saveSearchTabOptions();
 #ifndef DISABLE_WEBUI
     saveWebUITabOptions();
 #endif

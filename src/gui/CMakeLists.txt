@@ -17,19 +17,10 @@ qt_wrap_ui(UI_HEADERS
     previewselectdialog.ui
     properties/peersadditiondialog.ui
     properties/propertieswidget.ui
-    rss/automatedrssdownloader.ui
-    rss/rssfeeddialog.ui
-    rss/rsswidget.ui
-    search/searchjobwidget.ui
-    search/searchpluginselectdialog.ui
-    search/searchpluginsourcedialog.ui
-    search/searchwidget.ui
     shutdownconfirmdialog.ui
     speedlimitdialog.ui
-    statsdialog.ui
     torrentcategorydialog.ui
     torrentcontentlayoutdialog.ui
-    torrentcreatordialog.ui
     torrentoptionsdialog.ui
     torrentsharelimitswidget.ui
     torrenttagsdialog.ui
@@ -84,23 +75,8 @@ add_library(qbt_gui STATIC
     properties/piecesbar.h
     properties/propertieswidget.h
     properties/proptabbar.h
-    properties/speedplotview.h
-    properties/speedwidget.h
-    raisedmessagebox.h
-    rss/articlelistwidget.h
-    rss/automatedrssdownloader.h
-    rss/feedlistwidget.h
-    rss/htmlbrowser.h
-    rss/rssfeeddialog.h
-    rss/rsswidget.h
-    search/searchjobwidget.h
-    search/searchpluginselectdialog.h
-    search/searchpluginsourcedialog.h
-    search/searchsortmodel.h
-    search/searchwidget.h
     shutdownconfirmdialog.h
     speedlimitdialog.h
-    statsdialog.h
     statusbar.h
     torrentcategorydialog.h
     torrentcontentfiltermodel.h
@@ -112,7 +88,6 @@ add_library(qbt_gui STATIC
     torrentcontentmodelfolder.h
     torrentcontentmodelitem.h
     torrentcontentwidget.h
-    torrentcreatordialog.h
     torrentoptionsdialog.h
     torrentsharelimitswidget.h
     torrenttagsdialog.h
@@ -190,23 +165,9 @@ add_library(qbt_gui STATIC
     properties/piecesbar.cpp
     properties/propertieswidget.cpp
     properties/proptabbar.cpp
-    properties/speedplotview.cpp
-    properties/speedwidget.cpp
     raisedmessagebox.cpp
-    rss/articlelistwidget.cpp
-    rss/automatedrssdownloader.cpp
-    rss/feedlistwidget.cpp
-    rss/htmlbrowser.cpp
-    rss/rssfeeddialog.cpp
-    rss/rsswidget.cpp
-    search/searchjobwidget.cpp
-    search/searchpluginselectdialog.cpp
-    search/searchpluginsourcedialog.cpp
-    search/searchsortmodel.cpp
-    search/searchwidget.cpp
     shutdownconfirmdialog.cpp
     speedlimitdialog.cpp
-    statsdialog.cpp
     statusbar.cpp
     torrentcategorydialog.cpp
     torrentcontentfiltermodel.cpp
@@ -218,7 +179,6 @@ add_library(qbt_gui STATIC
     torrentcontentmodelfolder.cpp
     torrentcontentmodelitem.cpp
     torrentcontentwidget.cpp
-    torrentcreatordialog.cpp
     torrentoptionsdialog.cpp
     torrentsharelimitswidget.cpp
     torrenttagsdialog.cpp

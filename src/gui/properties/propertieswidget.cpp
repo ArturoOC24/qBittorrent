@@ -62,7 +62,6 @@
 #include "peerlistwidget.h"
 #include "pieceavailabilitybar.h"
 #include "proptabbar.h"
-#include "speedwidget.h"
 #include "ui_propertieswidget.h"
 
 PropertiesWidget::PropertiesWidget(QWidget *parent)
@@ -568,39 +567,6 @@ void PropertiesWidget::configure()
     // Torrent Content Widget
     m_ui->filesList->setContentDragEnabled(preferences->isTorrentContentDragEnabled());
 
-    // Speed widget
-    if (preferences->isSpeedWidgetEnabled())
-    {
-        if (!qobject_cast<SpeedWidget *>(m_speedWidget))
-        {
-            if (m_speedWidget)
-            {
-                m_ui->speedLayout->removeWidget(m_speedWidget);
-                delete m_speedWidget;
-            }
-
-            m_speedWidget = new SpeedWidget(this);
-            m_ui->speedLayout->addWidget(m_speedWidget);
-        }
-    }
-    else
-    {
-        if (!qobject_cast<QLabel *>(m_speedWidget))
-        {
-            if (m_speedWidget)
-            {
-                m_ui->speedLayout->removeWidget(m_speedWidget);
-                delete m_speedWidget;
-            }
-
-            const auto displayText = u"<center><b>%1</b><p>%2</p></center>"_s
-                .arg(tr("Speed graphs are disabled"), tr("You can enable it in Advanced Options"));
-            auto *label = new QLabel(displayText, this);
-            label->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-            m_speedWidget = label;
-            m_ui->speedLayout->addWidget(m_speedWidget);
-        }
-    }
 }
 
 void PropertiesWidget::askWebSeed()

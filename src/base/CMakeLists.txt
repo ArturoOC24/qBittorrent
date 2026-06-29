@@ -42,9 +42,6 @@ add_library(qbt_base STATIC
     bittorrent/torrentcontentlayout.h
     bittorrent/torrentcontentremoveoption.h
     bittorrent/torrentcontentremover.h
-    bittorrent/torrentcreationmanager.h
-    bittorrent/torrentcreationtask.h
-    bittorrent/torrentcreator.h
     bittorrent/torrentdescriptor.h
     bittorrent/torrentimpl.h
     bittorrent/torrentinfo.h
@@ -91,18 +88,6 @@ add_library(qbt_base STATIC
     preferences.h
     profile.h
     profile_p.h
-    rss/feed_serializer.h
-    rss/rss_article.h
-    rss/rss_autodownloader.h
-    rss/rss_autodownloadrule.h
-    rss/rss_feed.h
-    rss/rss_folder.h
-    rss/rss_item.h
-    rss/rss_parser.h
-    rss/rss_session.h
-    search/searchdownloadhandler.h
-    search/searchhandler.h
-    search/searchpluginmanager.h
     settingsstorage.h
     tag.h
     tagset.h
@@ -159,9 +144,6 @@ add_library(qbt_base STATIC
     bittorrent/torrent.cpp
     bittorrent/torrentcontenthandler.cpp
     bittorrent/torrentcontentremover.cpp
-    bittorrent/torrentcreationmanager.cpp
-    bittorrent/torrentcreationtask.cpp
-    bittorrent/torrentcreator.cpp
     bittorrent/torrentdescriptor.cpp
     bittorrent/torrentimpl.cpp
     bittorrent/torrentinfo.cpp
@@ -190,18 +172,6 @@ add_library(qbt_base STATIC
     preferences.cpp
     profile.cpp
     profile_p.cpp
-    rss/feed_serializer.cpp
-    rss/rss_article.cpp
-    rss/rss_autodownloader.cpp
-    rss/rss_autodownloadrule.cpp
-    rss/rss_feed.cpp
-    rss/rss_folder.cpp
-    rss/rss_item.cpp
-    rss/rss_parser.cpp
-    rss/rss_session.cpp
-    search/searchdownloadhandler.cpp
-    search/searchhandler.cpp
-    search/searchpluginmanager.cpp
     settingsstorage.cpp
     tag.cpp
     tagset.cpp

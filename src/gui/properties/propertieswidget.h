@@ -110,7 +110,6 @@ private:
     SlideState m_state;
     PeerListWidget *m_peerList = nullptr;
     TrackerListWidget *m_trackerList = nullptr;
-    QWidget *m_speedWidget = nullptr;
     QList<int> m_slideSizes;
     DownloadedPiecesBar *m_downloadedPieces = nullptr;
     PieceAvailabilityBar *m_piecesAvailability = nullptr;
