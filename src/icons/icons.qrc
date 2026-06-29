@@ -366,5 +366,13 @@
         <file alias="qbittorrent.svg">qbittorrent-tray.svg</file>
         <file alias="qbittorrent-tray-mono.svg">qbittorrent-tray-light.svg</file>
         <file alias="dark/qbittorrent-tray-mono.svg">qbittorrent-tray-dark.svg</file>
+        <file alias="window-bar/minimize-dark.svg">window-bar/minimize-dark.svg</file>
+        <file alias="window-bar/maximize-dark.svg">window-bar/maximize-dark.svg</file>
+        <file alias="window-bar/restore-dark.svg">window-bar/restore-dark.svg</file>
+        <file alias="window-bar/close-dark.svg">window-bar/close-dark.svg</file>
+        <file alias="window-bar/minimize-light.svg">window-bar/minimize-light.svg</file>
+        <file alias="window-bar/maximize-light.svg">window-bar/maximize-light.svg</file>
+        <file alias="window-bar/restore-light.svg">window-bar/restore-light.svg</file>
+        <file alias="window-bar/close-light.svg">window-bar/close-light.svg</file>
     </qresource>
 </RCC>

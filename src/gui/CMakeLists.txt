@@ -284,5 +284,13 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
         powermanagement/inhibitorwindows.cpp
         programupdater.h
         programupdater.cpp
+        widgetframe/windowbar.h
+        widgetframe/windowbar_p.h
+        widgetframe/windowbar.cpp
+        widgetframe/windowbutton.h
+        widgetframe/windowbutton_p.h
+        widgetframe/windowbutton.cpp
     )
+    target_link_libraries(qbt_gui PRIVATE QWindowKit::Widgets)
+    target_include_directories(qbt_gui PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/widgetframe)
 endif()

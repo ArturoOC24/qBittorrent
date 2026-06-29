@@ -65,6 +65,10 @@ namespace MacUtils
 }
 #endif
 
+#ifdef Q_OS_WIN
+namespace QWK { class WidgetWindowAgent; }
+#endif
+
 namespace Ui
 {
     class MainWindow;
@@ -182,6 +186,9 @@ private:
     void refreshTagComboBox();
     void refreshWindowTitle();
     void refreshTrayIconTooltip();
+#ifdef Q_OS_WIN
+    void installWindowAgent();
+#endif
 
     Ui::MainWindow *m_ui = nullptr;
 

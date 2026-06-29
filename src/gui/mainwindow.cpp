@@ -61,7 +61,11 @@
 
 #ifdef Q_OS_WIN
 #include <QCryptographicHash>
+#include <QEvent>
 #include <QScopeGuard>
+#include <QWKWidgets/widgetwindowagent.h>
+#include "widgetframe/windowbar.h"
+#include "widgetframe/windowbutton.h"
 #endif
 
 #include "base/bittorrent/session.h"
@@ -553,6 +557,10 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
 
     connect(pref, &Preferences::changed, this, &MainWindow::optionsSaved);
 
+#ifdef Q_OS_WIN
+    installWindowAgent();
+#endif
+
     qDebug("GUI Built");
 }
 
@@ -560,6 +568,83 @@ MainWindow::~MainWindow()
 {
     delete m_ui;
 }
+
+#ifdef Q_OS_WIN
+void MainWindow::installWindowAgent()
+{
+    // Reparent all top-level QMenus from the old menu bar to a fresh QMenuBar.
+    // This lets setMenuWidget() safely delete the old (now childless) menu bar
+    // via deleteLater() without destroying the menu objects.
+    QList<QMenu *> menus;
+    for (QAction *action : menuBar()->actions())
+    {
+        if (QMenu *menu = action->menu())
+            menus.append(menu);
+    }
+    auto *newMb = new QMenuBar(this);
+    for (QMenu *menu : menus)
+    {
+        menu->setParent(newMb);
+        newMb->addMenu(menu);
+    }
+
+    // Install QWindowKit Win32 WndProc hooks for native window chrome.
+    auto *agent = new QWK::WidgetWindowAgent(this);
+    agent->setup(this);
+
+    // Build the custom title bar strip.
+    auto *windowBar = new QWK::WindowBar();
+    windowBar->setHostWidget(this);
+    windowBar->setTitleFollowWindow(true);
+
+    auto *minBtn = new QWK::WindowButton();
+    minBtn->setObjectName(u"min-button"_s);
+    minBtn->setProperty("system-button", true);
+    minBtn->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+
+    auto *maxBtn = new QWK::WindowButton();
+    maxBtn->setObjectName(u"max-button"_s);
+    maxBtn->setProperty("system-button", true);
+    maxBtn->setCheckable(true);
+    maxBtn->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+
+    auto *closeBtn = new QWK::WindowButton();
+    closeBtn->setObjectName(u"close-button"_s);
+    closeBtn->setProperty("system-button", true);
+    closeBtn->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+
+    windowBar->setMenuBar(newMb);
+    windowBar->setMinButton(minBtn);
+    windowBar->setMaxButton(maxBtn);
+    windowBar->setCloseButton(closeBtn);
+
+    agent->setTitleBar(windowBar);
+    agent->setSystemButton(QWK::WindowAgentBase::Minimize, minBtn);
+    agent->setSystemButton(QWK::WindowAgentBase::Maximize, maxBtn);
+    agent->setSystemButton(QWK::WindowAgentBase::Close, closeBtn);
+    agent->setHitTestVisible(newMb, true);
+
+    // Place the window bar at the top of the main window (above the toolbar).
+    // setMenuWidget() replaces the previous menu widget and schedules its deletion.
+    setMenuWidget(windowBar);
+
+    connect(windowBar, &QWK::WindowBar::minimizeRequested, this, &QWidget::showMinimized);
+    connect(windowBar, &QWK::WindowBar::maximizeRequested, this, [this, maxBtn](bool max)
+    {
+        if (max)
+            showMaximized();
+        else
+            showNormal();
+        // Clear hover state on max button after toggling.
+        QEvent e(QEvent::Leave);
+        QCoreApplication::sendEvent(maxBtn, &e);
+    });
+    connect(windowBar, &QWK::WindowBar::closeRequested, this, &QWidget::close);
+
+    // Request Mica backdrop (Windows 11 22H2+); silently ignored on older systems.
+    agent->setWindowAttribute(u"mica"_s, true);
+}
+#endif
 
 bool MainWindow::isExecutionLogEnabled() const
 {

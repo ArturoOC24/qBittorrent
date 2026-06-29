@@ -129,6 +129,9 @@ QByteArray DefaultThemeSource::readStyleSheet()
     // Progress bar chunk: softer muted tones.
     const QByteArray pbChunk = dark ? "#388bfd" : "#0969da";
 
+    // Window-bar icon variant: white icons for dark mode, dark icons for light mode.
+    const QByteArray winBarVariant = dark ? "dark" : "light";
+
     // Base QSS – palette() references adapt automatically to light/dark;
     // only the few mode-specific values above are substituted.
     const QString qss = QStringLiteral(
@@ -205,12 +208,34 @@ QByteArray DefaultThemeSource::readStyleSheet()
         "QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; padding: 0 4px; left: 8px; }"
 
         "QToolTip { border: 1px solid palette(mid); border-radius: 3px; padding: 4px 6px; }"
+
+        /* QWindowKit window bar — Windows-only widgets, harmless selector on other platforms */
+        "QWK--WindowBar { background: transparent; border: none; }"
+        "QWK--WindowBar[bar-active=false] { background: transparent; }"
+        "QWK--WindowBar > QAbstractButton[system-button=true] {"
+        "  min-width: 46px; max-height: 32px; border: none; padding: 0; background: transparent; }"
+        "QWK--WindowBar > QAbstractButton[system-button=true]:hover { background: %1; }"
+        "QWK--WindowBar > QAbstractButton[system-button=true]:pressed { background: %2; }"
+        "QWK--WindowBar > QAbstractButton#close-button:hover { background: #e81123; }"
+        "QWK--WindowBar > QAbstractButton#close-button:pressed { background: #c50f1f; }"
+        "QWK--WindowBar > QAbstractButton#min-button {"
+        "  qproperty-iconNormal: url(:/icons/window-bar/minimize-%6.svg);"
+        "  qproperty-iconSize: 12px 12px; }"
+        "QWK--WindowBar > QAbstractButton#max-button {"
+        "  qproperty-iconNormal: url(:/icons/window-bar/maximize-%6.svg);"
+        "  qproperty-iconChecked: url(:/icons/window-bar/restore-%6.svg);"
+        "  qproperty-iconSize: 12px 12px; }"
+        "QWK--WindowBar > QAbstractButton#close-button {"
+        "  qproperty-iconNormal: url(:/icons/window-bar/close-%6.svg);"
+        "  qproperty-iconSize: 12px 12px; }"
+        "QWK--WindowBar QMenuBar { background: transparent; border: none; }"
     )
     .arg(QString::fromLatin1(hover))
     .arg(QString::fromLatin1(pressed))
     .arg(QString::fromLatin1(pbChunk))
     .arg(QString::fromLatin1(sbHandle))
-    .arg(QString::fromLatin1(sbHandleHover));
+    .arg(QString::fromLatin1(sbHandleHover))
+    .arg(QString::fromLatin1(winBarVariant));
 
     return qss.toUtf8();
 }

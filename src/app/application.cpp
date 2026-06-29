@@ -344,6 +344,11 @@ Application::Application(int &argc, char **argv)
 
     initializeTranslation();
 
+#if !defined(DISABLE_GUI) && defined(Q_OS_WIN)
+    QApplication::setStyle(u"windows11"_s);
+    QApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
+#endif
+
     connect(this, &QCoreApplication::aboutToQuit, this, &Application::cleanup);
     connect(m_instanceManager, &ApplicationInstanceManager::messageReceived, this, &Application::processMessage);
 #if defined(Q_OS_WIN) && !defined(DISABLE_GUI)

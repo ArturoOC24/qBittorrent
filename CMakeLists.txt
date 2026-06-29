@@ -59,6 +59,12 @@ include(CommonConfig)
 # Generate version header
 configure_file("src/base/version.h.in" "${CMAKE_CURRENT_SOURCE_DIR}/src/base/version.h" @ONLY)
 
+if (GUI AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    set(QWINDOWKIT_BUILD_QUICK OFF CACHE BOOL "" FORCE)
+    set(QWINDOWKIT_INSTALL OFF CACHE BOOL "" FORCE)
+    add_subdirectory(3rdparty/QWindowKit)
+endif()
+
 add_subdirectory(src)
 add_subdirectory(dist)
 
