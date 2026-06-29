@@ -182,6 +182,8 @@ void UIThemeManager::setTrayIconStyle(const TrayIconStyle value)
 
 void UIThemeManager::applyStyleSheet() const
 {
+    if (!m_themeSource)
+        return;
     qApp->setStyleSheet(QString::fromUtf8(m_themeSource->readStyleSheet()));
 }
 
