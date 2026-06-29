@@ -152,10 +152,11 @@ void PieceMapWidget::paintEvent(QPaintEvent *)
     const int rows  = std::max(1, (height() + gap) / step);
     const int total = cols * rows;
 
-    const QColor colDone      = QColor(0x2d, 0xa4, 0x4e);
-    const QColor colActive    = QColor(0xf0, 0x88, 0x00);
-    const QColor colAvailLow  = QColor(0xaa, 0xd0, 0xf5);
-    const QColor colAvailHigh = QColor(0x09, 0x69, 0xda);
+    const bool dark = palette().color(QPalette::Window).lightness() < 128;
+    const QColor colDone      = dark ? QColor(0x34, 0x8a, 0x4a) : QColor(0x2d, 0xa4, 0x4e);
+    const QColor colActive    = dark ? QColor(0xb0, 0x6a, 0x00) : QColor(0xf0, 0x88, 0x00);
+    const QColor colAvailLow  = dark ? QColor(0x1a, 0x2e, 0x42) : QColor(0xaa, 0xd0, 0xf5);
+    const QColor colAvailHigh = dark ? QColor(0x38, 0x8b, 0xfd) : QColor(0x09, 0x69, 0xda);
 
     const bool hasAvail       = !m_availability.isEmpty() && (m_availability.size() == n);
     const bool hasDownloading = !m_downloading.isEmpty() && (m_downloading.size() == n);

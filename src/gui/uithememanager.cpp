@@ -187,6 +187,7 @@ void UIThemeManager::applyStyleSheet() const
 
 void UIThemeManager::onColorSchemeChanged()
 {
+    applyStyleSheet();
     emit themeChanged();
 
     // workaround to refresh styled controls once color scheme is changed
