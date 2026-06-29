@@ -41,10 +41,10 @@
 class QCloseEvent;
 class QComboBox;
 class QFileSystemWatcher;
-class QSplitter;
 class QString;
 class QTabWidget;
 class QTimer;
+class QWidget;
 
 class AboutDialog;
 class DownloadFromURLDialog;
@@ -55,7 +55,6 @@ class PowerManagement;
 class ProgramUpdater;
 class PropertiesWidget;
 class StatusBar;
-class TransferListFiltersWidget;
 class TransferListWidget;
 
 #ifdef Q_OS_MACOS
@@ -104,7 +103,6 @@ private slots:
     void desktopNotificationClicked();
     void saveSettings() const;
     void loadSettings();
-    void saveSplitterSettings() const;
     void tabChanged(int newTab);
     bool defineUILockPassword();
     void clearUILockPassword();
@@ -133,7 +131,7 @@ private slots:
     void on_actionSpeedInTitleBar_triggered();
     void on_actionTopToolBar_triggered();
     void on_actionShowStatusbar_triggered();
-    void on_actionShowFiltersSidebar_triggered(bool checked);
+    void on_actionShowFiltersSidebar_triggered(bool checked);  // kept to avoid Qt auto-connect warning; no-op
     void on_actionDonateMoney_triggered();
     void on_actionExecutionLogs_triggered(bool checked);
     void on_actionNormalMessages_triggered(bool checked);
@@ -176,8 +174,12 @@ private:
     void keyPressEvent(QKeyEvent *event) override;
     bool event(QEvent *e) override;
     void showStatusBar(bool show);
-    void showFiltersSidebar(bool show);
     void applyTransferListFilter();
+    void onStatusFilterChanged(int index);
+    void onCategoryFilterChanged(int index);
+    void onTagFilterChanged(int index);
+    void refreshCategoryComboBox();
+    void refreshTagComboBox();
     void refreshWindowTitle();
     void refreshTrayIconTooltip();
 
@@ -200,7 +202,6 @@ private:
     QPointer<QMenu> m_trayIconMenu;
 
     TransferListWidget *m_transferListWidget = nullptr;
-    TransferListFiltersWidget *m_transferListFiltersWidget = nullptr;
     PropertiesWidget *m_propertiesWidget = nullptr;
     bool m_displaySpeedInTitle = false;
     bool m_forceExit = false;
@@ -210,10 +211,13 @@ private:
     LineEdit *m_columnFilterEdit = nullptr;
     QAction *m_columnFilterAction = nullptr;
     QComboBox *m_columnFilterComboBox = nullptr;
+    QComboBox *m_statusFilterComboBox = nullptr;
+    QComboBox *m_categoryFilterComboBox = nullptr;
+    QComboBox *m_tagFilterComboBox = nullptr;
     // Widgets
     QAction *m_queueSeparator = nullptr;
     QAction *m_queueSeparatorMenu = nullptr;
-    QSplitter *m_splitter = nullptr;
+    QWidget *m_transfersWidget = nullptr;
     QPointer<ExecutionLogWidget> m_executionLog;
     // Power Management
     PowerManagement *m_pwr = nullptr;

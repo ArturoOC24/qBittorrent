@@ -52,8 +52,10 @@
 #include <QProcess>
 #include <QPushButton>
 #include <QShortcut>
+#include <QHBoxLayout>
 #include <QSplitter>
 #include <QStatusBar>
+#include <QVBoxLayout>
 #include <QString>
 #include <QTimer>
 
@@ -89,7 +91,8 @@
 #include "speedlimitdialog.h"
 #include "statusbar.h"
 #include "trackerlist/trackerlistwidget.h"
-#include "transferlistfilterswidget.h"
+#include "base/tag.h"
+#include "base/torrentfilter.h"
 #include "transferlistmodel.h"
 #include "transferlistwidget.h"
 #include "ui_mainwindow.h"
@@ -206,8 +209,6 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     m_tabs = new HidableTabWidget(this);
     connect(m_tabs.data(), &QTabWidget::currentChanged, this, &MainWindow::tabChanged);
 
-    m_splitter = new QSplitter(Qt::Horizontal, this);
-
     auto *hSplitter = new QSplitter(Qt::Vertical, this);
     hSplitter->setChildrenCollapsible(false);
     hSplitter->setFrameShape(QFrame::NoFrame);
@@ -246,9 +247,53 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     connect(m_transferListWidget, &TransferListWidget::currentTorrentChanged, m_propertiesWidget, &PropertiesWidget::loadTorrentInfos);
     hSplitter->addWidget(m_transferListWidget);
     hSplitter->addWidget(m_propertiesWidget);
-    m_splitter->addWidget(hSplitter);
-    m_splitter->setCollapsible(0, false);
-    m_tabs->addTab(m_splitter,
+
+    // Status / Category / Tag filter bar above the torrent list
+    m_statusFilterComboBox = new QComboBox(this);
+    for (const auto &[label, value] : std::initializer_list<std::pair<const char *, int>>{
+            {QT_TR_NOOP("All Statuses"),        TorrentFilter::All},
+            {QT_TR_NOOP("Downloading"),          TorrentFilter::Downloading},
+            {QT_TR_NOOP("Seeding"),              TorrentFilter::Seeding},
+            {QT_TR_NOOP("Completed"),            TorrentFilter::Completed},
+            {QT_TR_NOOP("Running"),              TorrentFilter::Running},
+            {QT_TR_NOOP("Stopped"),              TorrentFilter::Stopped},
+            {QT_TR_NOOP("Active"),               TorrentFilter::Active},
+            {QT_TR_NOOP("Inactive"),             TorrentFilter::Inactive},
+            {QT_TR_NOOP("Stalled"),              TorrentFilter::Stalled},
+            {QT_TR_NOOP("Stalled Uploading"),    TorrentFilter::StalledUploading},
+            {QT_TR_NOOP("Stalled Downloading"),  TorrentFilter::StalledDownloading},
+            {QT_TR_NOOP("Checking"),             TorrentFilter::Checking},
+            {QT_TR_NOOP("Moving"),               TorrentFilter::Moving},
+            {QT_TR_NOOP("Errored"),              TorrentFilter::Errored}})
+    {
+        m_statusFilterComboBox->addItem(tr(label), value);
+    }
+    connect(m_statusFilterComboBox, &QComboBox::currentIndexChanged, this, &MainWindow::onStatusFilterChanged);
+
+    m_categoryFilterComboBox = new QComboBox(this);
+    connect(m_categoryFilterComboBox, &QComboBox::currentIndexChanged, this, &MainWindow::onCategoryFilterChanged);
+
+    m_tagFilterComboBox = new QComboBox(this);
+    connect(m_tagFilterComboBox, &QComboBox::currentIndexChanged, this, &MainWindow::onTagFilterChanged);
+
+    auto *filterBar = new QWidget(this);
+    filterBar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    auto *filterBarLayout = new QHBoxLayout(filterBar);
+    filterBarLayout->setContentsMargins(4, 3, 4, 3);
+    filterBarLayout->setSpacing(6);
+    filterBarLayout->addWidget(m_statusFilterComboBox);
+    filterBarLayout->addWidget(m_categoryFilterComboBox);
+    filterBarLayout->addWidget(m_tagFilterComboBox);
+    filterBarLayout->addStretch();
+
+    m_transfersWidget = new QWidget(this);
+    auto *transfersLayout = new QVBoxLayout(m_transfersWidget);
+    transfersLayout->setContentsMargins(0, 0, 0, 0);
+    transfersLayout->setSpacing(0);
+    transfersLayout->addWidget(filterBar);
+    transfersLayout->addWidget(hSplitter);
+
+    m_tabs->addTab(m_transfersWidget,
 #ifndef Q_OS_MACOS
         UIThemeManager::instance()->getIcon(u"folder-remote"_s),
 #endif
@@ -267,7 +312,13 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     connect(m_columnFilterComboBox, &QComboBox::currentIndexChanged, this, &MainWindow::applyTransferListFilter);
     connect(m_columnFilterEdit, &LineEdit::textChanged, this, &MainWindow::applyTransferListFilter);
     connect(hSplitter, &QSplitter::splitterMoved, this, &MainWindow::saveSettings);
-    connect(m_splitter, &QSplitter::splitterMoved, this, &MainWindow::saveSplitterSettings);
+
+    // Keep category/tag combos in sync with session state
+    auto *session = BitTorrent::Session::instance();
+    connect(session, &BitTorrent::Session::categoryAdded,   this, &MainWindow::refreshCategoryComboBox);
+    connect(session, &BitTorrent::Session::categoryRemoved, this, &MainWindow::refreshCategoryComboBox);
+    connect(session, &BitTorrent::Session::tagAdded,        this, &MainWindow::refreshTagComboBox);
+    connect(session, &BitTorrent::Session::tagRemoved,      this, &MainWindow::refreshTagComboBox);
 
 #ifdef Q_OS_MACOS
     // Increase top spacing to avoid tab overlapping
@@ -476,19 +527,17 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     }
 #endif
 
-    const bool isFiltersSidebarVisible = pref->isFiltersSidebarVisible();
-    m_ui->actionShowFiltersSidebar->setChecked(isFiltersSidebarVisible);
-    if (isFiltersSidebarVisible)
-    {
-        showFiltersSidebar(true);
-    }
-    else
-    {
-        m_transferListWidget->applyStatusFilter(pref->getTransSelFilter());
-        m_transferListWidget->applyCategoryFilter(QString());
-        m_transferListWidget->applyTagFilter(std::nullopt);
-        m_transferListWidget->applyTrackerFilter({});
-    }
+    // Restore status filter selection; category/tag start at "All"
+    const int savedStatus = pref->getTransSelFilter();
+    m_statusFilterComboBox->blockSignals(true);
+    m_statusFilterComboBox->setCurrentIndex(savedStatus);
+    m_statusFilterComboBox->blockSignals(false);
+    m_transferListWidget->applyStatusFilter(savedStatus);
+    m_transferListWidget->applyCategoryFilter(QString());
+    m_transferListWidget->applyTagFilter(std::nullopt);
+    m_transferListWidget->applyTrackerFilter({});
+    refreshCategoryComboBox();
+    refreshTagComboBox();
 
     // Start watching the executable for updates
     m_executableWatcher = new QFileSystemWatcher(this);
@@ -540,8 +589,6 @@ bool MainWindow::isDownloadTrackerFavicon() const
 
 void MainWindow::setDownloadTrackerFavicon(const bool value)
 {
-    if (m_transferListFiltersWidget)
-        m_transferListFiltersWidget->setDownloadTrackerFavicon(value);
     m_storeDownloadTrackerFavicon = value;
 }
 
@@ -734,7 +781,7 @@ void MainWindow::tabChanged([[maybe_unused]] const int newTab)
 {
     // We cannot rely on the index newTab
     // because the tab order is undetermined now
-    if (m_tabs->currentWidget() == m_splitter)
+    if (m_tabs->currentWidget() == m_transfersWidget)
     {
         qDebug("Changed tab to transfer list, refreshing the list");
         m_propertiesWidget->loadDynamicData();
@@ -751,22 +798,11 @@ void MainWindow::saveSettings() const
     m_propertiesWidget->saveSettings();
 }
 
-void MainWindow::saveSplitterSettings() const
-{
-    if (!m_transferListFiltersWidget)
-        return;
-
-    auto *pref = Preferences::instance();
-    pref->setFiltersSidebarWidth(m_splitter->sizes()[0]);
-}
 
 void MainWindow::cleanup()
 {
     if (!m_neverShown)
-    {
         saveSettings();
-        saveSplitterSettings();
-    }
 
     delete m_executableWatcher;
 
@@ -854,7 +890,7 @@ void MainWindow::createKeyboardShortcuts()
 // Keyboard shortcuts slots
 void MainWindow::displayTransferTab() const
 {
-    m_tabs->setCurrentWidget(m_splitter);
+    m_tabs->setCurrentWidget(m_transfersWidget);
 }
 
 void MainWindow::displayExecutionLogTab()
@@ -1218,27 +1254,6 @@ void MainWindow::showStatusBar(bool show)
     }
 }
 
-void MainWindow::showFiltersSidebar(const bool show)
-{
-    if (show && !m_transferListFiltersWidget)
-    {
-        m_transferListFiltersWidget = new TransferListFiltersWidget(m_splitter, m_transferListWidget, isDownloadTrackerFavicon());
-        m_splitter->insertWidget(0, m_transferListFiltersWidget);
-        m_splitter->setCollapsible(0, true);
-        // From https://doc.qt.io/qt-5/qsplitter.html#setSizes:
-        // Instead, any additional/missing space is distributed amongst the widgets
-        // according to the relative weight of the sizes.
-        m_splitter->setStretchFactor(0, 0);
-        m_splitter->setStretchFactor(1, 1);
-        m_splitter->setSizes({Preferences::instance()->getFiltersSidebarWidth()});
-    }
-    else if (!show && m_transferListFiltersWidget)
-    {
-        saveSplitterSettings();
-        delete m_transferListFiltersWidget;
-        m_transferListFiltersWidget = nullptr;
-    }
-}
 
 void MainWindow::loadPreferences()
 {
@@ -1433,11 +1448,8 @@ void MainWindow::on_actionShowStatusbar_triggered()
     showStatusBar(isVisible);
 }
 
-void MainWindow::on_actionShowFiltersSidebar_triggered(const bool checked)
+void MainWindow::on_actionShowFiltersSidebar_triggered([[maybe_unused]] const bool checked)
 {
-    Preferences *const pref = Preferences::instance();
-    pref->setFiltersSidebarVisible(checked);
-    showFiltersSidebar(checked);
 }
 
 void MainWindow::on_actionSpeedInTitleBar_triggered()
@@ -1649,6 +1661,74 @@ void MainWindow::updatePowerManagementState() const
 void MainWindow::applyTransferListFilter()
 {
     m_transferListWidget->applyFilter(m_columnFilterEdit->text(), m_columnFilterComboBox->currentData().value<TransferListModel::Column>());
+}
+
+void MainWindow::onStatusFilterChanged(const int index)
+{
+    const int status = m_statusFilterComboBox->itemData(index).toInt();
+    m_transferListWidget->applyStatusFilter(status);
+    Preferences::instance()->setTransSelFilter(index);
+}
+
+void MainWindow::onCategoryFilterChanged([[maybe_unused]] const int index)
+{
+    const QVariant data = m_categoryFilterComboBox->currentData();
+    if (!data.isValid())
+        m_transferListWidget->applyCategoryFilter(QString());   // null → disable filter
+    else
+        m_transferListWidget->applyCategoryFilter(data.toString());
+}
+
+void MainWindow::onTagFilterChanged([[maybe_unused]] const int index)
+{
+    const QVariant data = m_tagFilterComboBox->currentData();
+    if (!data.isValid())
+        m_transferListWidget->applyTagFilter(std::nullopt);
+    else
+        m_transferListWidget->applyTagFilter(Tag(data.toString()));
+}
+
+void MainWindow::refreshCategoryComboBox()
+{
+    // Remember current selection
+    const QVariant current = m_categoryFilterComboBox->currentData();
+    m_categoryFilterComboBox->blockSignals(true);
+    m_categoryFilterComboBox->clear();
+
+    // Invalid QVariant → "All" (disable filter, null QString)
+    m_categoryFilterComboBox->addItem(tr("All Categories"), QVariant());
+    // Empty non-null QString → uncategorized
+    m_categoryFilterComboBox->addItem(tr("Uncategorized"), QString(u""_s));
+
+    const QStringList cats = BitTorrent::Session::instance()->categories();
+    for (const QString &cat : cats)
+        m_categoryFilterComboBox->addItem(cat, cat);
+
+    // Restore selection (fall back to "All" if gone)
+    const int idx = current.isValid()
+        ? m_categoryFilterComboBox->findData(current)
+        : -1;
+    m_categoryFilterComboBox->setCurrentIndex(idx >= 0 ? idx : 0);
+    m_categoryFilterComboBox->blockSignals(false);
+}
+
+void MainWindow::refreshTagComboBox()
+{
+    const QVariant current = m_tagFilterComboBox->currentData();
+    m_tagFilterComboBox->blockSignals(true);
+    m_tagFilterComboBox->clear();
+
+    m_tagFilterComboBox->addItem(tr("All Tags"), QVariant());
+
+    const auto tags = BitTorrent::Session::instance()->tags();
+    for (const Tag &tag : tags)
+        m_tagFilterComboBox->addItem(tag.toString(), tag.toString());
+
+    const int idx = current.isValid()
+        ? m_tagFilterComboBox->findData(current)
+        : -1;
+    m_tagFilterComboBox->setCurrentIndex(idx >= 0 ? idx : 0);
+    m_tagFilterComboBox->blockSignals(false);
 }
 
 void MainWindow::refreshWindowTitle()
