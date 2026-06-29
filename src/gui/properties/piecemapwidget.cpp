@@ -150,8 +150,8 @@ void PieceMapWidget::paintEvent(QPaintEvent *)
             color = bgEmpty;
         }
 
-        const int col = k % cols;
-        const int row = k / cols;
+        const int row = k % rows;
+        const int col = k / rows;
         painter.fillRect(col * STEP, row * STEP, CELL, CELL, color);
     }
 }
