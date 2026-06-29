@@ -125,10 +125,9 @@ UIThemeManager::UIThemeManager()
         m_themeSource = std::make_unique<DefaultThemeSource>();
 
     if (m_useCustomTheme)
-    {
         applyPalette();
-        applyStyleSheet();
-    }
+
+    applyStyleSheet();
 }
 
 UIThemeManager *UIThemeManager::instance()

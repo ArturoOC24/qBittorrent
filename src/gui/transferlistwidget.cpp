@@ -155,6 +155,12 @@ TransferListWidget::TransferListWidget(IGUIApplication *app, QWidget *parent)
     // Default hidden columns
     if (!columnLoaded)
     {
+        setColumnHidden(TransferListModel::TR_QUEUE_POSITION, true);
+        setColumnHidden(TransferListModel::TR_SEEDS, true);
+        setColumnHidden(TransferListModel::TR_PEERS, true);
+        setColumnHidden(TransferListModel::TR_CATEGORY, true);
+        setColumnHidden(TransferListModel::TR_TAGS, true);
+        setColumnHidden(TransferListModel::TR_AVAILABILITY, true);
         setColumnHidden(TransferListModel::TR_CREATE_DATE, true);
         setColumnHidden(TransferListModel::TR_ADD_DATE, true);
         setColumnHidden(TransferListModel::TR_SEED_DATE, true);
@@ -1301,10 +1307,6 @@ void TransferListWidget::displayListMenu()
         listMenu->addAction(actionForceRecheck);
     // We can not force reannounce torrents that are stopped/errored/checking/missing files/queued.
     // We may already have the tracker list from magnet url. So we can force reannounce torrents without metadata anyway.
-    listMenu->addAction(actionForceReannounce);
-    actionForceReannounce->setEnabled(oneCanForceReannounce);
-    if (!oneCanForceReannounce)
-        actionForceReannounce->setToolTip(tr("Can not force reannounce if torrent is Stopped/Queued/Errored/Checking"));
     listMenu->addSeparator();
     listMenu->addAction(actionOpenDestinationFolder);
     if (BitTorrent::Session::instance()->isQueueingSystemEnabled() && oneNotFinished)
@@ -1320,17 +1322,7 @@ void TransferListWidget::displayListMenu()
 
     QMenu *copySubMenu = listMenu->addMenu(UIThemeManager::instance()->getIcon(u"edit-copy"_s), tr("&Copy"));
     copySubMenu->addAction(actionCopyName);
-    copySubMenu->addAction(actionCopyHash1);
-    actionCopyHash1->setEnabled(hasInfohashV1);
-    copySubMenu->addAction(actionCopyHash2);
-    actionCopyHash2->setEnabled(hasInfohashV2);
     copySubMenu->addAction(actionCopyMagnetLink);
-    copySubMenu->addAction(actionCopyID);
-    copySubMenu->addAction(actionCopyComment);
-    copySubMenu->addAction(actionCopyContentPath);
-
-    actionExportTorrent->setToolTip(tr("Exported torrent is not necessarily the same as the imported"));
-    listMenu->addAction(actionExportTorrent);
 
     listMenu->popup(QCursor::pos());
 }

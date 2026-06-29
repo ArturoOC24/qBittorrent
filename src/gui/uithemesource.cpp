@@ -112,7 +112,196 @@ DefaultThemeSource::DefaultThemeSource()
 
 QByteArray DefaultThemeSource::readStyleSheet()
 {
-    return {};
+    return QByteArrayLiteral(
+        /* ── Global ─────────────────────────────────────────────── */
+        "* { outline: 0; }"
+
+        /* ── QMainWindow / central widget ───────────────────────── */
+        "QMainWindow { border: none; }"
+
+        /* ── Toolbar ─────────────────────────────────────────────── */
+        "QToolBar {"
+        "  border: none;"
+        "  spacing: 2px;"
+        "  padding: 2px 4px;"
+        "}"
+        "QToolBar::separator {"
+        "  width: 1px;"
+        "  background: palette(mid);"
+        "  margin: 4px 2px;"
+        "}"
+        "QToolButton {"
+        "  border: none;"
+        "  border-radius: 4px;"
+        "  padding: 4px 6px;"
+        "  background: transparent;"
+        "}"
+        "QToolButton:hover  { background: palette(midlight); }"
+        "QToolButton:pressed { background: palette(mid); }"
+
+        /* ── Menu bar ─────────────────────────────────────────────── */
+        "QMenuBar { border-bottom: 1px solid palette(mid); }"
+        "QMenuBar::item { padding: 4px 8px; border-radius: 3px; }"
+        "QMenuBar::item:selected { background: palette(highlight); color: palette(highlighted-text); }"
+        "QMenu { border: 1px solid palette(mid); border-radius: 4px; padding: 2px; }"
+        "QMenu::item { padding: 5px 24px 5px 12px; border-radius: 3px; }"
+        "QMenu::item:selected { background: palette(highlight); color: palette(highlighted-text); }"
+        "QMenu::separator { height: 1px; background: palette(mid); margin: 3px 6px; }"
+
+        /* ── Tab bar (Properties panel buttons are QPushButtons, */
+        /* but QTabBar is used in Options dialog) ─────────────────── */
+        "QTabBar::tab {"
+        "  padding: 6px 16px;"
+        "  border: none;"
+        "  border-bottom: 2px solid transparent;"
+        "  background: transparent;"
+        "}"
+        "QTabBar::tab:selected {"
+        "  border-bottom: 2px solid palette(highlight);"
+        "  color: palette(highlight);"
+        "}"
+        "QTabBar::tab:hover:!selected { background: palette(midlight); border-radius: 4px 4px 0 0; }"
+
+        /* ── Progress bar ─────────────────────────────────────────── */
+        "QProgressBar {"
+        "  border: none;"
+        "  border-radius: 3px;"
+        "  background: palette(mid);"
+        "  text-align: center;"
+        "  max-height: 8px;"
+        "  min-height: 8px;"
+        "}"
+        "QProgressBar::chunk {"
+        "  border-radius: 3px;"
+        "  background: palette(highlight);"
+        "}"
+
+        /* ── Tree / List view ─────────────────────────────────────── */
+        "QTreeView, QListView {"
+        "  border: none;"
+        "  alternate-background-color: transparent;"
+        "  show-decoration-selected: 1;"
+        "}"
+        "QTreeView::item, QListView::item { padding: 3px 0; }"
+        "QTreeView::branch:has-siblings:!adjoins-item { border-image: none; }"
+        "QTreeView::branch:has-siblings:adjoins-item  { border-image: none; }"
+        "QTreeView::branch:!has-children:!has-siblings:adjoins-item { border-image: none; }"
+
+        /* ── Header ───────────────────────────────────────────────── */
+        "QHeaderView::section {"
+        "  border: none;"
+        "  border-right: 1px solid palette(mid);"
+        "  border-bottom: 1px solid palette(mid);"
+        "  padding: 4px 6px;"
+        "  background: palette(window);"
+        "}"
+        "QHeaderView::section:last { border-right: none; }"
+
+        /* ── Splitter ─────────────────────────────────────────────── */
+        "QSplitter::handle { background: palette(mid); }"
+        "QSplitter::handle:horizontal { width: 1px; }"
+        "QSplitter::handle:vertical   { height: 1px; }"
+
+        /* ── Scrollbar ────────────────────────────────────────────── */
+        "QScrollBar:vertical {"
+        "  border: none;"
+        "  background: palette(window);"
+        "  width: 8px;"
+        "  margin: 0;"
+        "}"
+        "QScrollBar::handle:vertical {"
+        "  background: palette(mid);"
+        "  border-radius: 4px;"
+        "  min-height: 24px;"
+        "}"
+        "QScrollBar::handle:vertical:hover { background: palette(dark); }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+        "QScrollBar:horizontal {"
+        "  border: none;"
+        "  background: palette(window);"
+        "  height: 8px;"
+        "  margin: 0;"
+        "}"
+        "QScrollBar::handle:horizontal {"
+        "  background: palette(mid);"
+        "  border-radius: 4px;"
+        "  min-width: 24px;"
+        "}"
+        "QScrollBar::handle:horizontal:hover { background: palette(dark); }"
+        "QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }"
+
+        /* ── Push button ──────────────────────────────────────────── */
+        "QPushButton {"
+        "  border: 1px solid palette(mid);"
+        "  border-radius: 4px;"
+        "  padding: 5px 14px;"
+        "  background: palette(button);"
+        "}"
+        "QPushButton:hover   { background: palette(midlight); }"
+        "QPushButton:pressed { background: palette(mid); }"
+        "QPushButton:default {"
+        "  border-color: palette(highlight);"
+        "  color: palette(highlight);"
+        "}"
+        "QPushButton:flat { border: none; background: transparent; }"
+        "QPushButton:flat:hover { background: palette(midlight); }"
+
+        /* ── Line / text edit ────────────────────────────────────── */
+        "QLineEdit, QTextEdit, QPlainTextEdit {"
+        "  border: 1px solid palette(mid);"
+        "  border-radius: 4px;"
+        "  padding: 3px 6px;"
+        "  background: palette(base);"
+        "}"
+        "QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {"
+        "  border-color: palette(highlight);"
+        "}"
+
+        /* ── Combo box ───────────────────────────────────────────── */
+        "QComboBox {"
+        "  border: 1px solid palette(mid);"
+        "  border-radius: 4px;"
+        "  padding: 3px 6px;"
+        "  background: palette(button);"
+        "}"
+        "QComboBox:focus { border-color: palette(highlight); }"
+        "QComboBox::drop-down { border: none; width: 20px; }"
+        "QComboBox QAbstractItemView { border: 1px solid palette(mid); border-radius: 4px; }"
+
+        /* ── Spin box ────────────────────────────────────────────── */
+        "QSpinBox, QDoubleSpinBox {"
+        "  border: 1px solid palette(mid);"
+        "  border-radius: 4px;"
+        "  padding: 3px 6px;"
+        "  background: palette(base);"
+        "}"
+        "QSpinBox:focus, QDoubleSpinBox:focus { border-color: palette(highlight); }"
+
+        /* ── Status bar ──────────────────────────────────────────── */
+        "QStatusBar { border-top: 1px solid palette(mid); }"
+        "QStatusBar::item { border: none; }"
+
+        /* ── Group box ───────────────────────────────────────────── */
+        "QGroupBox {"
+        "  border: 1px solid palette(mid);"
+        "  border-radius: 4px;"
+        "  margin-top: 8px;"
+        "  padding-top: 8px;"
+        "}"
+        "QGroupBox::title {"
+        "  subcontrol-origin: margin;"
+        "  subcontrol-position: top left;"
+        "  padding: 0 4px;"
+        "  left: 8px;"
+        "}"
+
+        /* ── Tooltip ─────────────────────────────────────────────── */
+        "QToolTip {"
+        "  border: 1px solid palette(mid);"
+        "  border-radius: 3px;"
+        "  padding: 4px 6px;"
+        "}"
+    );
 }
 
 QColor DefaultThemeSource::getColor(const QString &colorId, const ColorMode colorMode) const
