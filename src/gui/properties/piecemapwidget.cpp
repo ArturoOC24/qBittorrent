@@ -76,7 +76,10 @@ void PieceMapWidget::clear()
 
 QSize PieceMapWidget::sizeHint() const
 {
-    return {200, 80};
+    const int step = m_cellSize + m_gap;
+    // Suggest a height that is a clean multiple of the cell step (~20 rows).
+    const int rows = std::max(1, height() > 0 ? height() / step : 20);
+    return {200, rows * step};
 }
 
 void PieceMapWidget::contextMenuEvent(QContextMenuEvent *event)
@@ -97,6 +100,7 @@ void PieceMapWidget::contextMenuEvent(QContextMenuEvent *event)
         connect(a, &QAction::triggered, this, [this, s]
         {
             m_cellSize = s;
+            updateGeometry();
             update();
         });
     }
@@ -117,6 +121,7 @@ void PieceMapWidget::contextMenuEvent(QContextMenuEvent *event)
         connect(a, &QAction::triggered, this, [this, g]
         {
             m_gap = g;
+            updateGeometry();
             update();
         });
     }
@@ -130,21 +135,23 @@ void PieceMapWidget::paintEvent(QPaintEvent *)
     painter.setRenderHint(QPainter::Antialiasing, false);
 
     const QPalette &pal = palette();
-    painter.fillRect(rect(), pal.color(QPalette::Base));
+    const int cell = m_cellSize;
+    const int gap  = m_gap;
+    const int step = cell + gap;
+
+    // Fill background with the empty-cell color so any partial row at the
+    // bottom is invisible (no different-colored strip).
+    const QColor bgEmpty      = pal.color(QPalette::Mid);
+    painter.fillRect(rect(), bgEmpty);
 
     const int n = m_downloaded.size();
     if (n <= 0)
         return;
 
-    const int cell = m_cellSize;
-    const int gap  = m_gap;
-    const int step = cell + gap;
-
     const int cols  = std::max(1, (width()  + gap) / step);
     const int rows  = std::max(1, (height() + gap) / step);
     const int total = cols * rows;
 
-    const QColor bgEmpty      = pal.color(QPalette::Mid);
     const QColor colDone      = QColor(0x2d, 0xa4, 0x4e);
     const QColor colActive    = QColor(0xf0, 0x88, 0x00);
     const QColor colAvailLow  = QColor(0xaa, 0xd0, 0xf5);
