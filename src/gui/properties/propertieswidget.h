@@ -42,6 +42,7 @@ class DownloadedPiecesBar;
 class LineEdit;
 class PeerListWidget;
 class PieceAvailabilityBar;
+class PieceMapWidget;
 class PropTabBar;
 class TrackerListWidget;
 
@@ -113,6 +114,7 @@ private:
     QList<int> m_slideSizes;
     DownloadedPiecesBar *m_downloadedPieces = nullptr;
     PieceAvailabilityBar *m_piecesAvailability = nullptr;
+    PieceMapWidget *m_pieceMap = nullptr;
     PropTabBar *m_tabBar = nullptr;
     LineEdit *m_contentFilterLine = nullptr;
     int m_handleWidth = -1;

@@ -1905,7 +1905,7 @@ void Preferences::setTagFilterState(const bool checked)
 
 bool Preferences::getTrackerFilterState() const
 {
-    return value(u"TransferListFilters/trackerFilterState"_s, true);
+    return value(u"TransferListFilters/trackerFilterState"_s, false);
 }
 
 void Preferences::setTrackerFilterState(const bool checked)

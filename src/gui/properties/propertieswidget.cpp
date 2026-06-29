@@ -61,6 +61,7 @@
 #include "downloadedpiecesbar.h"
 #include "peerlistwidget.h"
 #include "pieceavailabilitybar.h"
+#include "piecemapwidget.h"
 #include "proptabbar.h"
 #include "ui_propertieswidget.h"
 
@@ -113,6 +114,12 @@ PropertiesWidget::PropertiesWidget(QWidget *parent)
     m_ui->groupBarLayout->addWidget(m_piecesAvailability, 1, 1);
     m_piecesAvailability->setFixedHeight(barHeight);
     m_piecesAvailability->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    // 2D piece map (spans both bar rows, column 1, rows 2)
+    m_pieceMap = new PieceMapWidget(this);
+    m_ui->groupBarLayout->addWidget(m_pieceMap, 2, 0, 1, 2);
+    m_pieceMap->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_pieceMap->setMinimumHeight(60);
 
     // Tracker list
     m_trackerList = new TrackerListWidget(this);
@@ -239,6 +246,7 @@ void PropertiesWidget::clear()
     m_ui->labelAddedOnVal->clear();
     m_downloadedPieces->clear();
     m_piecesAvailability->clear();
+    m_pieceMap->clear();
     m_peerList->clear();
     m_contentFilterLine->clear();
 }
@@ -307,6 +315,7 @@ void PropertiesWidget::loadTorrentInfos(BitTorrent::Torrent *const torrent)
     m_torrent = torrent;
     m_downloadedPieces->setTorrent(m_torrent);
     m_piecesAvailability->setTorrent(m_torrent);
+    m_pieceMap->setTorrent(m_torrent);
     m_trackerList->setTorrent(m_torrent);
     m_ui->filesList->setContentHandler(m_torrent);
     if (!m_torrent)
@@ -476,7 +485,10 @@ void PropertiesWidget::loadDynamicData()
                             , [this, torrent = QPointer(m_torrent)](const QList<int> &pieceAvailability)
                     {
                         if (m_torrent && (m_torrent == torrent))
+                        {
                             m_piecesAvailability->setAvailability(pieceAvailability);
+                            m_pieceMap->setAvailability(pieceAvailability);
+                        }
                     });
 
                     m_ui->labelAverageAvailabilityVal->setText(Utils::String::fromDouble(m_torrent->distributedCopies(), 3));
@@ -494,7 +506,10 @@ void PropertiesWidget::loadDynamicData()
                         , [this, torrent = QPointer(m_torrent)](const QBitArray &downloadingPieces)
                 {
                     if (m_torrent && (m_torrent == torrent))
+                    {
                         m_downloadedPieces->setProgress(m_torrent->pieces(), downloadingPieces);
+                        m_pieceMap->setProgress(m_torrent->pieces(), downloadingPieces);
+                    }
                 });
             }
             else

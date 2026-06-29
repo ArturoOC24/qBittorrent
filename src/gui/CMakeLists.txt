@@ -72,6 +72,7 @@ add_library(qbt_gui STATIC
     properties/peerlistwidget.h
     properties/peersadditiondialog.h
     properties/pieceavailabilitybar.h
+    properties/piecemapwidget.h
     properties/piecesbar.h
     properties/propertieswidget.h
     properties/proptabbar.h
@@ -162,6 +163,7 @@ add_library(qbt_gui STATIC
     properties/peerlistwidget.cpp
     properties/peersadditiondialog.cpp
     properties/pieceavailabilitybar.cpp
+    properties/piecemapwidget.cpp
     properties/piecesbar.cpp
     properties/propertieswidget.cpp
     properties/proptabbar.cpp
