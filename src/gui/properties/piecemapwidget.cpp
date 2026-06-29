@@ -29,10 +29,7 @@
 
 namespace
 {
-    // Gap between cells in pixels
     constexpr int GAP = 1;
-    // Target cell size; actual size is clamped to fill available width evenly
-    constexpr int TARGET_CELL = 5;
     constexpr int MIN_CELL = 2;
 }
 
@@ -75,26 +72,6 @@ void PieceMapWidget::clear()
     update();
 }
 
-int PieceMapWidget::cellSize() const
-{
-    const int n = m_downloaded.size();
-    if (n <= 0 || width() <= 0)
-        return TARGET_CELL;
-
-    // Find largest cell size where all pieces fit in the available width.
-    // cells_per_row * (cell + gap) - gap <= width
-    // cells_per_row = ceil(n / rows) where rows = ceil(n / cells_per_row)
-    // Simpler: pick cells_per_row from width and compute resulting cell size.
-    // Start from TARGET_CELL and shrink if needed.
-    for (int cell = TARGET_CELL; cell >= MIN_CELL; --cell)
-    {
-        const int cols = (width() + GAP) / (cell + GAP);
-        if (cols > 0)
-            return cell;
-    }
-    return MIN_CELL;
-}
-
 QSize PieceMapWidget::sizeHint() const
 {
     return {200, 80};
@@ -114,9 +91,19 @@ void PieceMapWidget::paintEvent(QPaintEvent *)
     if (n <= 0)
         return;
 
-    const int cell = cellSize();
-    const int step = cell + GAP;
-    const int cols = std::max(1, (width() + GAP) / step);
+    const int W = width();
+    const int H = height();
+
+    // Derive cols from target cell size, then stretch cw/ch to fill area exactly.
+    // ideal square cell: area per piece = W*H/n → c = sqrt(W*H/n)
+    const int idealCell = std::max(MIN_CELL,
+        static_cast<int>(std::sqrt(static_cast<double>(W) * H / n)));
+    const int cols = std::max(1, (W + GAP) / (idealCell + GAP));
+    const int rows = (n + cols - 1) / cols;
+
+    // Stretch cell dimensions so the grid fills the full widget area
+    const int cw = std::max(1, (W + GAP) / cols - GAP);
+    const int ch = std::max(1, (H + GAP) / rows - GAP);
 
     // Colors
     const QColor bgEmpty = pal.color(QPalette::Mid);
@@ -132,9 +119,9 @@ void PieceMapWidget::paintEvent(QPaintEvent *)
     {
         const int col = i % cols;
         const int row = i / cols;
-        const int x = col * step;
-        const int y = row * step;
-        const QRect cellRect(x, y, cell, cell);
+        const int x = col * (cw + GAP);
+        const int y = row * (ch + GAP);
+        const QRect cellRect(x, y, cw, ch);
 
         QColor color;
         if (!m_downloaded.isEmpty() && m_downloaded.testBit(i))

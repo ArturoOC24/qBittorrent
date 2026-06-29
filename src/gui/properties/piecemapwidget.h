@@ -48,8 +48,6 @@ protected:
     QSize sizeHint() const override;
 
 private:
-    int cellSize() const;
-
     BitTorrent::Torrent *m_torrent = nullptr;
     QBitArray m_downloaded;
     QBitArray m_downloading;
