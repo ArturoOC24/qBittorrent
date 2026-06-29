@@ -38,10 +38,8 @@
 class QPushButton;
 class QTreeView;
 
-class DownloadedPiecesBar;
 class LineEdit;
 class PeerListWidget;
-class PieceAvailabilityBar;
 class PieceMapWidget;
 class PropTabBar;
 class TrackerListWidget;
@@ -112,8 +110,6 @@ private:
     PeerListWidget *m_peerList = nullptr;
     TrackerListWidget *m_trackerList = nullptr;
     QList<int> m_slideSizes;
-    DownloadedPiecesBar *m_downloadedPieces = nullptr;
-    PieceAvailabilityBar *m_piecesAvailability = nullptr;
     PieceMapWidget *m_pieceMap = nullptr;
     PropTabBar *m_tabBar = nullptr;
     LineEdit *m_contentFilterLine = nullptr;

@@ -58,9 +58,7 @@
 #include "gui/uithememanager.h"
 #include "gui/utils.h"
 #include "gui/utils/keysequence.h"
-#include "downloadedpiecesbar.h"
 #include "peerlistwidget.h"
-#include "pieceavailabilitybar.h"
 #include "piecemapwidget.h"
 #include "proptabbar.h"
 #include "ui_propertieswidget.h"
@@ -98,28 +96,20 @@ PropertiesWidget::PropertiesWidget(QWidget *parent)
     connect(BitTorrent::Session::instance(), &BitTorrent::Session::torrentSavePathChanged, this, &PropertiesWidget::updateSavePath);
     connect(m_ui->filesList, &TorrentContentWidget::stateChanged, this, &PropertiesWidget::saveSettings);
 
-    // set bar height relative to screen dpi
-    const int barHeight = 18;
-
-    // Downloaded pieces progress bar
+    // Hide labels from the old two-bar layout — replaced by the 2D piece map
     m_ui->tempProgressBarArea->setVisible(false);
-    m_downloadedPieces = new DownloadedPiecesBar(this);
-    m_ui->groupBarLayout->addWidget(m_downloadedPieces, 0, 1);
-    m_downloadedPieces->setFixedHeight(barHeight);
-    m_downloadedPieces->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-
-    // Pieces availability bar
     m_ui->tempAvailabilityBarArea->setVisible(false);
-    m_piecesAvailability = new PieceAvailabilityBar(this);
-    m_ui->groupBarLayout->addWidget(m_piecesAvailability, 1, 1);
-    m_piecesAvailability->setFixedHeight(barHeight);
-    m_piecesAvailability->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_ui->labelDownloadedPieces->setVisible(false);
+    m_ui->labelProgressVal->setVisible(false);
+    m_ui->labelPiecesAvailability->setVisible(false);
+    m_ui->labelAverageAvailabilityVal->setVisible(false);
+    m_ui->lineBelowBars->setVisible(false);
 
-    // 2D piece map (spans both bar rows, column 1, rows 2)
+    // 2D piece map — occupies rows 0-1, all columns
     m_pieceMap = new PieceMapWidget(this);
-    m_ui->groupBarLayout->addWidget(m_pieceMap, 2, 0, 1, 2);
+    m_ui->groupBarLayout->addWidget(m_pieceMap, 0, 0, 2, 2);
     m_pieceMap->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    m_pieceMap->setMinimumHeight(60);
+    m_pieceMap->setMinimumHeight(80);
 
     // Tracker list
     m_trackerList = new TrackerListWidget(this);
@@ -158,22 +148,12 @@ PropertiesWidget::~PropertiesWidget()
     delete m_ui;
 }
 
-void PropertiesWidget::showPiecesAvailability(bool show)
+void PropertiesWidget::showPiecesAvailability([[maybe_unused]] bool show)
 {
-    m_ui->labelPiecesAvailability->setVisible(show);
-    m_piecesAvailability->setVisible(show);
-    m_ui->labelAverageAvailabilityVal->setVisible(show);
-    if (show || !m_downloadedPieces->isVisible())
-        m_ui->lineBelowBars->setVisible(show);
 }
 
-void PropertiesWidget::showPiecesDownloaded(bool show)
+void PropertiesWidget::showPiecesDownloaded([[maybe_unused]] bool show)
 {
-    m_ui->labelDownloadedPieces->setVisible(show);
-    m_downloadedPieces->setVisible(show);
-    m_ui->labelProgressVal->setVisible(show);
-    if (show || !m_piecesAvailability->isVisible())
-        m_ui->lineBelowBars->setVisible(show);
 }
 
 void PropertiesWidget::setVisibility(const bool visible)
@@ -244,8 +224,6 @@ void PropertiesWidget::clear()
     m_ui->labelLastSeenCompleteVal->clear();
     m_ui->labelCreatedByVal->clear();
     m_ui->labelAddedOnVal->clear();
-    m_downloadedPieces->clear();
-    m_piecesAvailability->clear();
     m_pieceMap->clear();
     m_peerList->clear();
     m_contentFilterLine->clear();
@@ -313,8 +291,6 @@ void PropertiesWidget::loadTorrentInfos(BitTorrent::Torrent *const torrent)
 {
     clear();
     m_torrent = torrent;
-    m_downloadedPieces->setTorrent(m_torrent);
-    m_piecesAvailability->setTorrent(m_torrent);
     m_pieceMap->setTorrent(m_torrent);
     m_trackerList->setTorrent(m_torrent);
     m_ui->filesList->setContentHandler(m_torrent);
@@ -486,8 +462,7 @@ void PropertiesWidget::loadDynamicData()
                     {
                         if (m_torrent && (m_torrent == torrent))
                         {
-                            m_piecesAvailability->setAvailability(pieceAvailability);
-                            m_pieceMap->setAvailability(pieceAvailability);
+                                m_pieceMap->setAvailability(pieceAvailability);
                         }
                     });
 
@@ -507,7 +482,6 @@ void PropertiesWidget::loadDynamicData()
                 {
                     if (m_torrent && (m_torrent == torrent))
                     {
-                        m_downloadedPieces->setProgress(m_torrent->pieces(), downloadingPieces);
                         m_pieceMap->setProgress(m_torrent->pieces(), downloadingPieces);
                     }
                 });

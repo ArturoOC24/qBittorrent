@@ -32,15 +32,15 @@ namespace
     // Gap between cells in pixels
     constexpr int GAP = 1;
     // Target cell size; actual size is clamped to fill available width evenly
-    constexpr int TARGET_CELL = 9;
-    constexpr int MIN_CELL = 4;
+    constexpr int TARGET_CELL = 5;
+    constexpr int MIN_CELL = 2;
 }
 
 PieceMapWidget::PieceMapWidget(QWidget *parent)
     : QWidget(parent)
 {
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    setMinimumHeight(40);
+    setMinimumHeight(60);
 }
 
 void PieceMapWidget::setTorrent(BitTorrent::Torrent *torrent)
