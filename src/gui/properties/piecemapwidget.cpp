@@ -29,8 +29,7 @@
 namespace
 {
     constexpr int CELL = 2;
-    constexpr int GAP  = 1;
-    constexpr int STEP = CELL + GAP;
+    constexpr int STEP = CELL;
 }
 
 PieceMapWidget::PieceMapWidget(QWidget *parent)
@@ -92,8 +91,8 @@ void PieceMapWidget::paintEvent(QPaintEvent *)
         return;
 
     // Fixed cell size; quantity fills the widget area
-    const int cols  = std::max(1, (width()  + GAP) / STEP);
-    const int rows  = std::max(1, (height() + GAP) / STEP);
+    const int cols  = std::max(1, width()  / STEP);
+    const int rows  = std::max(1, height() / STEP);
     const int total = cols * rows;
 
     // Colors
