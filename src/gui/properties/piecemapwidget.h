@@ -23,13 +23,16 @@
 #include <QList>
 #include <QWidget>
 
+#include "base/settingvalue.h"
+
 namespace BitTorrent
 {
     class Torrent;
 }
 
 // 2D grid map of torrent pieces.
-// Each cell = one piece. Color encodes download state + peer availability.
+// Each cell represents one or more pieces. Color encodes download state + availability.
+// Cell size (granularity) and gap are configurable via right-click context menu.
 class PieceMapWidget final : public QWidget
 {
     Q_OBJECT
@@ -45,6 +48,7 @@ public:
 
 protected:
     void paintEvent(QPaintEvent *event) override;
+    void contextMenuEvent(QContextMenuEvent *event) override;
     QSize sizeHint() const override;
 
 private:
@@ -53,4 +57,7 @@ private:
     QBitArray m_downloading;
     QList<int> m_availability;
     int m_maxAvailability = 1;
+
+    CachedSettingValue<int> m_cellSize;
+    CachedSettingValue<int> m_gap;
 };

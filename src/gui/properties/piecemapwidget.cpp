@@ -21,22 +21,25 @@
 
 #include <algorithm>
 
+#include <QActionGroup>
+#include <QContextMenuEvent>
+#include <QMenu>
 #include <QPainter>
 #include <QPalette>
 
 #include "base/bittorrent/torrent.h"
+#include "base/global.h"
 
-namespace
-{
-    constexpr int CELL = 2;
-    constexpr int STEP = CELL;
-}
+#define PIECEMAP_KEY(name) (u"GUI/PieceMap/" name)
 
 PieceMapWidget::PieceMapWidget(QWidget *parent)
     : QWidget(parent)
+    , m_cellSize {PIECEMAP_KEY(u"CellSize"_s), 2}
+    , m_gap      {PIECEMAP_KEY(u"Gap"_s),      0}
 {
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setMinimumHeight(60);
+    setContextMenuPolicy(Qt::DefaultContextMenu);
 }
 
 void PieceMapWidget::setTorrent(BitTorrent::Torrent *torrent)
@@ -76,46 +79,89 @@ QSize PieceMapWidget::sizeHint() const
     return {200, 80};
 }
 
+void PieceMapWidget::contextMenuEvent(QContextMenuEvent *event)
+{
+    QMenu menu(this);
+
+    // --- Cell size submenu ---
+    QMenu *sizeMenu = menu.addMenu(tr("Cell size"));
+    auto *sizeGroup = new QActionGroup(sizeMenu);
+    sizeGroup->setExclusive(true);
+    const int currentCell = m_cellSize;
+    for (const int s : {1, 2, 3, 4, 6, 8})
+    {
+        QAction *a = sizeMenu->addAction(tr("%1 px").arg(s));
+        a->setCheckable(true);
+        a->setChecked(s == currentCell);
+        sizeGroup->addAction(a);
+        connect(a, &QAction::triggered, this, [this, s]
+        {
+            m_cellSize = s;
+            update();
+        });
+    }
+
+    // --- Gap submenu ---
+    QMenu *gapMenu = menu.addMenu(tr("Gap"));
+    auto *gapGroup = new QActionGroup(gapMenu);
+    gapGroup->setExclusive(true);
+    const int currentGap = m_gap;
+    for (const int g : {0, 1, 2})
+    {
+        QAction *a = (g == 0)
+            ? gapMenu->addAction(tr("None"))
+            : gapMenu->addAction(tr("%1 px").arg(g));
+        a->setCheckable(true);
+        a->setChecked(g == currentGap);
+        gapGroup->addAction(a);
+        connect(a, &QAction::triggered, this, [this, g]
+        {
+            m_gap = g;
+            update();
+        });
+    }
+
+    menu.exec(event->globalPos());
+}
+
 void PieceMapWidget::paintEvent(QPaintEvent *)
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing, false);
 
     const QPalette &pal = palette();
-
-    // Background
     painter.fillRect(rect(), pal.color(QPalette::Base));
 
     const int n = m_downloaded.size();
     if (n <= 0)
         return;
 
-    // Fixed cell size; quantity fills the widget area
-    const int cols  = std::max(1, width()  / STEP);
-    const int rows  = std::max(1, height() / STEP);
+    const int cell = m_cellSize;
+    const int gap  = m_gap;
+    const int step = cell + gap;
+
+    const int cols  = std::max(1, (width()  + gap) / step);
+    const int rows  = std::max(1, (height() + gap) / step);
     const int total = cols * rows;
 
-    // Colors
-    const QColor bgEmpty     = pal.color(QPalette::Mid);
-    const QColor colDone     = QColor(0x2d, 0xa4, 0x4e);
-    const QColor colActive   = QColor(0xf0, 0x88, 0x00);
-    const QColor colAvailLow = QColor(0xaa, 0xd0, 0xf5);
-    const QColor colAvailHigh= QColor(0x09, 0x69, 0xda);
+    const QColor bgEmpty      = pal.color(QPalette::Mid);
+    const QColor colDone      = QColor(0x2d, 0xa4, 0x4e);
+    const QColor colActive    = QColor(0xf0, 0x88, 0x00);
+    const QColor colAvailLow  = QColor(0xaa, 0xd0, 0xf5);
+    const QColor colAvailHigh = QColor(0x09, 0x69, 0xda);
 
-    const bool hasAvail      = !m_availability.isEmpty() && (m_availability.size() == n);
-    const bool hasDownloading= !m_downloading.isEmpty() && (m_downloading.size() == n);
+    const bool hasAvail       = !m_availability.isEmpty() && (m_availability.size() == n);
+    const bool hasDownloading = !m_downloading.isEmpty() && (m_downloading.size() == n);
 
     for (int k = 0; k < total; ++k)
     {
-        // Map cell k → piece range [p0, p1) proportionally
         const int p0   = static_cast<int>(static_cast<double>(k)     * n / total);
         const int p1   = static_cast<int>(static_cast<double>(k + 1) * n / total);
         const int pEnd = std::min(n, std::max(p0 + 1, p1));
 
-        // Aggregate state across the piece range
-        int doneCount = 0;
+        int doneCount  = 0;
         bool anyActive = false;
-        int availSum = 0;
+        int availSum   = 0;
         for (int i = p0; i < pEnd; ++i)
         {
             if (!m_downloaded.isEmpty() && m_downloaded.testBit(i))
@@ -134,7 +180,6 @@ void PieceMapWidget::paintEvent(QPaintEvent *)
         }
         else if (anyActive || doneCount > 0)
         {
-            // Partially done or actively downloading
             color = colActive;
         }
         else if (hasAvail && availSum > 0)
@@ -150,8 +195,9 @@ void PieceMapWidget::paintEvent(QPaintEvent *)
             color = bgEmpty;
         }
 
+        // Column-major fill: first column top→bottom, then next column, etc.
         const int row = k % rows;
         const int col = k / rows;
-        painter.fillRect(col * STEP, row * STEP, CELL, CELL, color);
+        painter.fillRect(col * step, row * step, cell, cell, color);
     }
 }
