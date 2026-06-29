@@ -20,7 +20,6 @@
 #include "piecemapwidget.h"
 
 #include <algorithm>
-#include <cmath>
 
 #include <QPainter>
 #include <QPalette>
@@ -29,8 +28,9 @@
 
 namespace
 {
-    constexpr int GAP = 1;
-    constexpr int MIN_CELL = 2;
+    constexpr int CELL = 2;
+    constexpr int GAP  = 1;
+    constexpr int STEP = CELL + GAP;
 }
 
 PieceMapWidget::PieceMapWidget(QWidget *parent)
@@ -91,51 +91,56 @@ void PieceMapWidget::paintEvent(QPaintEvent *)
     if (n <= 0)
         return;
 
-    const int W = width();
-    const int H = height();
-
-    // Derive cols from target cell size, then stretch cw/ch to fill area exactly.
-    // ideal square cell: area per piece = W*H/n → c = sqrt(W*H/n)
-    const int idealCell = std::max(MIN_CELL,
-        static_cast<int>(std::sqrt(static_cast<double>(W) * H / n)));
-    const int cols = std::max(1, (W + GAP) / (idealCell + GAP));
-    const int rows = (n + cols - 1) / cols;
-
-    // Stretch cell dimensions so the grid fills the full widget area
-    const int cw = std::max(1, (W + GAP) / cols - GAP);
-    const int ch = std::max(1, (H + GAP) / rows - GAP);
+    // Fixed cell size; quantity fills the widget area
+    const int cols  = std::max(1, (width()  + GAP) / STEP);
+    const int rows  = std::max(1, (height() + GAP) / STEP);
+    const int total = cols * rows;
 
     // Colors
-    const QColor bgEmpty = pal.color(QPalette::Mid);
-    const QColor colDone = QColor(0x2d, 0xa4, 0x4e);       // green
-    const QColor colActive = QColor(0xf0, 0x88, 0x00);      // amber (downloading)
-    const QColor colAvailLow = QColor(0xaa, 0xd0, 0xf5);    // pale blue
-    const QColor colAvailHigh = QColor(0x09, 0x69, 0xda);   // saturated blue
+    const QColor bgEmpty     = pal.color(QPalette::Mid);
+    const QColor colDone     = QColor(0x2d, 0xa4, 0x4e);
+    const QColor colActive   = QColor(0xf0, 0x88, 0x00);
+    const QColor colAvailLow = QColor(0xaa, 0xd0, 0xf5);
+    const QColor colAvailHigh= QColor(0x09, 0x69, 0xda);
 
-    const bool hasAvail = !m_availability.isEmpty() && (m_availability.size() == n);
-    const bool hasDownloading = !m_downloading.isEmpty() && (m_downloading.size() == n);
+    const bool hasAvail      = !m_availability.isEmpty() && (m_availability.size() == n);
+    const bool hasDownloading= !m_downloading.isEmpty() && (m_downloading.size() == n);
 
-    for (int i = 0; i < n; ++i)
+    for (int k = 0; k < total; ++k)
     {
-        const int col = i % cols;
-        const int row = i / cols;
-        const int x = col * (cw + GAP);
-        const int y = row * (ch + GAP);
-        const QRect cellRect(x, y, cw, ch);
+        // Map cell k → piece range [p0, p1) proportionally
+        const int p0   = static_cast<int>(static_cast<double>(k)     * n / total);
+        const int p1   = static_cast<int>(static_cast<double>(k + 1) * n / total);
+        const int pEnd = std::min(n, std::max(p0 + 1, p1));
 
+        // Aggregate state across the piece range
+        int doneCount = 0;
+        bool anyActive = false;
+        int availSum = 0;
+        for (int i = p0; i < pEnd; ++i)
+        {
+            if (!m_downloaded.isEmpty() && m_downloaded.testBit(i))
+                ++doneCount;
+            else if (hasDownloading && m_downloading.testBit(i))
+                anyActive = true;
+            if (hasAvail)
+                availSum += m_availability[i];
+        }
+
+        const int span = pEnd - p0;
         QColor color;
-        if (!m_downloaded.isEmpty() && m_downloaded.testBit(i))
+        if (doneCount == span)
         {
             color = colDone;
         }
-        else if (hasDownloading && m_downloading.testBit(i))
+        else if (anyActive || doneCount > 0)
         {
+            // Partially done or actively downloading
             color = colActive;
         }
-        else if (hasAvail && m_availability[i] > 0)
+        else if (hasAvail && availSum > 0)
         {
-            const float ratio = static_cast<float>(m_availability[i]) / m_maxAvailability;
-            // Lerp between pale and saturated blue
+            const float ratio = static_cast<float>(availSum) / (span * m_maxAvailability);
             const int r = static_cast<int>(colAvailLow.red()   + ratio * (colAvailHigh.red()   - colAvailLow.red()));
             const int g = static_cast<int>(colAvailLow.green() + ratio * (colAvailHigh.green() - colAvailLow.green()));
             const int b = static_cast<int>(colAvailLow.blue()  + ratio * (colAvailHigh.blue()  - colAvailLow.blue()));
@@ -146,6 +151,8 @@ void PieceMapWidget::paintEvent(QPaintEvent *)
             color = bgEmpty;
         }
 
-        painter.fillRect(cellRect, color);
+        const int col = k % cols;
+        const int row = k / cols;
+        painter.fillRect(col * STEP, row * STEP, CELL, CELL, color);
     }
 }
