@@ -56,6 +56,7 @@ class ProgramUpdater;
 class PropertiesWidget;
 class RSSWidget;
 class SearchWidget;
+class SpeedGraphWidget;
 class StatsDialog;
 class StatusBar;
 class TorrentCreatorDialog;
@@ -83,6 +84,7 @@ namespace Ui
 }
 
 #ifdef Q_OS_WIN
+struct ITaskbarList3;
 namespace QWK
 {
     class WindowBar;
@@ -157,6 +159,8 @@ private slots:
     void on_actionSearchWidget_triggered();
     void on_actionRSSReader_triggered();
     void on_actionSpeedInTitleBar_triggered();
+    void on_actionCompactRows_triggered(bool checked);
+    void on_actionShowSpeedGraph_triggered(bool checked);
     void on_actionTopToolBar_triggered();
     void on_actionShowStatusbar_triggered();
     void on_actionShowFiltersSidebar_triggered(bool checked);
@@ -206,6 +210,8 @@ private:
     void showEvent(QShowEvent *) override;
     void keyPressEvent(QKeyEvent *event) override;
     bool event(QEvent *e) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
+    void positionSpeedGraph();
     void displayRSSTab(bool enable);
     void displaySearchTab(bool enable);
     void createTorrentTriggered(const Path &path);
@@ -219,6 +225,8 @@ private:
     void installPython();
     bool verifyPythonInstaller(const Path &installerPath) const;
     void installWindowAgent();
+    void updateTaskbarProgress();
+    void setupJumpList();
     bool nativeEvent(const QByteArray &eventType, void *message, qintptr *result) override;
 #endif
 
@@ -274,6 +282,10 @@ private:
 
     SettingValue<bool> m_storeExecutionLogEnabled;
     SettingValue<bool> m_storeDownloadTrackerFavicon;
+    SettingValue<bool> m_storeCompactRows;
+    SettingValue<bool> m_storeSpeedGraphVisible;
+
+    SpeedGraphWidget *m_speedGraph = nullptr;
     CachedSettingValue<Log::MsgTypes> m_storeExecutionLogTypes;
 
 #if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
@@ -289,6 +301,7 @@ private:
 
 #ifdef Q_OS_WIN
     QWK::WindowBar *m_windowBar = nullptr;
+    ITaskbarList3 *m_taskbarList = nullptr;
 #endif
 
     QHash<QString, QAction *> m_pluginActions;

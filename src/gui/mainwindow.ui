@@ -116,6 +116,8 @@
     <addaction name="actionShowStatusbar"/>
     <addaction name="actionShowFiltersSidebar"/>
     <addaction name="actionSpeedInTitleBar"/>
+    <addaction name="actionCompactRows"/>
+    <addaction name="actionShowSpeedGraph"/>
     <addaction name="separator"/>
     <addaction name="actionSearchWidget"/>
     <addaction name="actionRSSReader"/>
@@ -338,6 +340,28 @@
    </property>
    <property name="toolTip">
     <string>Show Transfer Speed in Title Bar</string>
+   </property>
+  </action>
+  <action name="actionCompactRows">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Compact Rows</string>
+   </property>
+   <property name="toolTip">
+    <string>Use a denser torrent list layout</string>
+   </property>
+  </action>
+  <action name="actionShowSpeedGraph">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Spee&amp;d Graph</string>
+   </property>
+   <property name="toolTip">
+    <string>Show the floating speed graph over the torrent list</string>
    </property>
   </action>
   <action name="actionRSSReader">

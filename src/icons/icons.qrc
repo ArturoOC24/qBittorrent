@@ -368,6 +368,13 @@
         <file alias="dark/qbittorrent-tray-mono.svg">qbittorrent-tray-dark.svg</file>
         <file>sort-asc.svg</file>
         <file>sort-desc.svg</file>
+        <file>dark/list-add.svg</file>
+        <file>dark/insert-link.svg</file>
+        <file>dark/list-remove.svg</file>
+        <file>dark/configure.svg</file>
+        <file>dark/torrent-start.svg</file>
+        <file>dark/torrent-stop.svg</file>
+        <file>dark/directory.svg</file>
         <file alias="window-bar/minimize-dark.svg">window-bar/minimize-dark.svg</file>
         <file alias="window-bar/maximize-dark.svg">window-bar/maximize-dark.svg</file>
         <file alias="window-bar/restore-dark.svg">window-bar/restore-dark.svg</file>

@@ -49,6 +49,7 @@ add_library(qbt_gui STATIC
     banlistoptionsdialog.h
     color.h
     colorscheme.h
+    collapsiblesplitter.h
     cookiesdialog.h
     cookiesmodel.h
     deletionconfirmationdialog.h
@@ -103,6 +104,7 @@ add_library(qbt_gui STATIC
     speedlimitdialog.h
     statsdialog.h
     statusbar.h
+    speedgraphwidget.h
     torrentcategorydialog.h
     torrentcontentfiltermodel.h
     torrentcontentitemdelegate.h
@@ -159,6 +161,7 @@ add_library(qbt_gui STATIC
     advancedsettings.cpp
     autoexpandabledialog.cpp
     banlistoptionsdialog.cpp
+    collapsiblesplitter.cpp
     cookiesdialog.cpp
     cookiesmodel.cpp
     deletionconfirmationdialog.cpp
@@ -210,6 +213,7 @@ add_library(qbt_gui STATIC
     speedlimitdialog.cpp
     statsdialog.cpp
     statusbar.cpp
+    speedgraphwidget.cpp
     torrentcategorydialog.cpp
     torrentcontentfiltermodel.cpp
     torrentcontentitemdelegate.cpp

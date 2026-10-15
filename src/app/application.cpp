@@ -882,7 +882,31 @@ void Application::processParams(const QBtCommandLineParameters &params)
     if (params.skipDialog.has_value())
         addTorrentOption = params.skipDialog.value() ? AddTorrentOption::SkipDialog : AddTorrentOption::ShowDialog;
     for (const QString &torrentSource : params.torrentSources)
+    {
+#ifdef Q_OS_WIN
+        // Session commands used by the taskbar jump list.
+        if (torrentSource == u"@pauseSession")
+        {
+            BitTorrent::Session::instance()->pause();
+            continue;
+        }
+        if (torrentSource == u"@resumeSession")
+        {
+            BitTorrent::Session::instance()->resume();
+            continue;
+        }
+        if (torrentSource == u"@showAddTorrentLink")
+        {
+            if (MainWindow *window = mainWindow())
+            {
+                window->activate();
+                QMetaObject::invokeMethod(window, "on_actionDownloadFromURL_triggered");
+            }
+            continue;
+        }
+#endif
         m_addTorrentManager->addTorrent(torrentSource, params.addTorrentParams, addTorrentOption);
+    }
 #else
     for (const QString &torrentSource : params.torrentSources)
         m_addTorrentManager->addTorrent(torrentSource, params.addTorrentParams);

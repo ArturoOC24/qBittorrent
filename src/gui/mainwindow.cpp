@@ -63,7 +63,9 @@
 #include <windowsx.h>
 #include <dwmapi.h>
 #include <shlwapi.h>
+#include <shobjidl.h>
 #include <QCryptographicHash>
+#include <QDir>
 #include <QScopeGuard>
 #include <QToolButton>
 #include "widgetframe/windowbar.h"
@@ -86,6 +88,7 @@
 #include "base/version.h"
 #include "aboutdialog.h"
 #include "autoexpandabledialog.h"
+#include "collapsiblesplitter.h"
 #include "cookiesdialog.h"
 #include "desktopintegration.h"
 #include "downloadfromurldialog.h"
@@ -100,6 +103,7 @@
 #include "properties/proptabbar.h"
 #include "rss/rsswidget.h"
 #include "search/searchwidget.h"
+#include "speedgraphwidget.h"
 #include "speedlimitdialog.h"
 #include "statsdialog.h"
 #include "statusbar.h"
@@ -155,6 +159,8 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     , m_preventTimer {new QTimer(this)}
     , m_storeExecutionLogEnabled {EXECUTIONLOG_SETTINGS_KEY(u"Enabled"_s)}
     , m_storeDownloadTrackerFavicon {SETTINGS_KEY(u"DownloadTrackerFavicon"_s)}
+    , m_storeCompactRows {SETTINGS_KEY(u"CompactRows"_s)}
+    , m_storeSpeedGraphVisible {SETTINGS_KEY(u"SpeedGraphVisible"_s)}
     , m_storeExecutionLogTypes {EXECUTIONLOG_SETTINGS_KEY(u"Types"_s), Log::MsgType::ALL}
 #ifdef Q_OS_MACOS
     , m_badger {std::make_unique<MacUtils::Badger>()}
@@ -240,8 +246,9 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
 
     m_splitter = new QSplitter(Qt::Horizontal, this);
 
-    auto *hSplitter = new QSplitter(Qt::Vertical, this);
+    auto *hSplitter = new CollapsibleSplitter(Qt::Vertical, this);
     hSplitter->setChildrenCollapsible(false);
+    hSplitter->setHandleWidth(15);
     hSplitter->setFrameShape(QFrame::NoFrame);
 
     // Torrent filter
@@ -272,11 +279,37 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
 
     // Transfer List tab
     m_transferListWidget = new TransferListWidget(app, this);
+
+    // Speed graph floats as an overlay in the bottom-right of the torrent list.
+    m_speedGraph = new SpeedGraphWidget(m_transferListWidget);
+    m_speedGraph->setVisible(m_storeSpeedGraphVisible.get(true));
+    m_transferListWidget->installEventFilter(this);
+    positionSpeedGraph();
+
     m_propertiesWidget = new PropertiesWidget(hSplitter);
     m_propertiesWidget->setObjectName(u"propertiesPanel"_s);
     connect(m_transferListWidget, &TransferListWidget::currentTorrentChanged, m_propertiesWidget, &PropertiesWidget::loadTorrentInfos);
     hSplitter->addWidget(m_transferListWidget);
     hSplitter->addWidget(m_propertiesWidget);
+    hSplitter->setCollapsible(1, true);
+
+    // Wire the toggle pill on the splitter handle to collapse/expand the panel.
+    if (auto *toggleHandle = qobject_cast<CollapsibleSplitterHandle *>(hSplitter->handle(1)))
+    {
+        QToolButton *pill = toggleHandle->toggleButton();
+        const auto refreshPillIcon = [this, pill]
+        {
+            pill->setIcon(UIThemeManager::instance()->getIcon(m_propertiesWidget->isPanelReduced() ? u"sort-asc"_s : u"sort-desc"_s));
+            pill->setToolTip(m_propertiesWidget->isPanelReduced() ? tr("Show details panel") : tr("Hide details panel"));
+        };
+        refreshPillIcon();
+        connect(pill, &QToolButton::clicked, this, [this]
+        {
+            m_propertiesWidget->setVisibility(m_propertiesWidget->isPanelReduced());
+        });
+        connect(m_propertiesWidget, &PropertiesWidget::panelVisibilityChanged, this, [refreshPillIcon](bool) { refreshPillIcon(); });
+    }
+
     m_splitter->addWidget(hSplitter);
     m_splitter->setCollapsible(0, false);
 
@@ -569,6 +602,11 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     populatePluginsMenu();
 #endif
 
+    m_ui->actionCompactRows->setChecked(m_storeCompactRows.get(false));
+    on_actionCompactRows_triggered(m_ui->actionCompactRows->isChecked());
+
+    m_ui->actionShowSpeedGraph->setChecked(m_storeSpeedGraphVisible.get(true));
+
 #ifdef Q_OS_WIN
     installWindowAgent();
 #endif
@@ -668,6 +706,114 @@ void MainWindow::installWindowAgent()
     // already gives the DWM shadow + rounded corners, and extending the frame
     // interferes with the Snap Layouts caption detection in windowed mode.
     ::SetWindowPos(hwnd, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+
+    setupJumpList();
+}
+
+void MainWindow::updateTaskbarProgress()
+{
+    if (!m_taskbarList)
+    {
+        ITaskbarList3 *taskbarList = nullptr;
+        if (FAILED(::CoCreateInstance(CLSID_TaskbarList, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&taskbarList))))
+            return;
+        if (FAILED(taskbarList->HrInit()))
+        {
+            taskbarList->Release();
+            return;
+        }
+        m_taskbarList = taskbarList;
+    }
+
+    const HWND hwnd = reinterpret_cast<HWND>(winId());
+
+    qlonglong wanted = 0;
+    qlonglong completed = 0;
+    for (const BitTorrent::Torrent *torrent : asConst(BitTorrent::Session::instance()->torrents()))
+    {
+        if (torrent->isDownloading() && !torrent->isFinished())
+        {
+            wanted += torrent->wantedSize();
+            completed += torrent->completedSize();
+        }
+    }
+
+    if (wanted > 0)
+    {
+        m_taskbarList->SetProgressState(hwnd, TBPF_NORMAL);
+        m_taskbarList->SetProgressValue(hwnd, static_cast<ULONGLONG>(completed), static_cast<ULONGLONG>(wanted));
+    }
+    else
+    {
+        m_taskbarList->SetProgressState(hwnd, TBPF_NOPROGRESS);
+    }
+}
+
+void MainWindow::setupJumpList()
+{
+    ICustomDestinationList *destList = nullptr;
+    if (FAILED(::CoCreateInstance(CLSID_DestinationList, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&destList))))
+        return;
+
+    UINT minSlots = 0;
+    IObjectArray *removedItems = nullptr;
+    if (FAILED(destList->BeginList(&minSlots, IID_PPV_ARGS(&removedItems))))
+    {
+        destList->Release();
+        return;
+    }
+    removedItems->Release();
+
+    IObjectCollection *tasks = nullptr;
+    if (SUCCEEDED(::CoCreateInstance(CLSID_EnumerableObjectCollection, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&tasks))))
+    {
+        const std::wstring exePath = QDir::toNativeSeparators(QCoreApplication::applicationFilePath()).toStdWString();
+
+        // PKEY_Title == {F29F85E0-4FF9-1068-AB91-08002B27B3D9}, 2
+        const PROPERTYKEY pkeyTitle = {{0xF29F85E0, 0x4FF9, 0x1068, {0xAB, 0x91, 0x08, 0x00, 0x2B, 0x27, 0xB3, 0xD9}}, 2};
+
+        const auto addTask = [tasks, &exePath, &pkeyTitle](const QString &title, const QString &arguments)
+        {
+            IShellLinkW *link = nullptr;
+            if (FAILED(::CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&link))))
+                return;
+
+            link->SetPath(exePath.c_str());
+            link->SetArguments(arguments.toStdWString().c_str());
+
+            IPropertyStore *propStore = nullptr;
+            if (SUCCEEDED(link->QueryInterface(IID_PPV_ARGS(&propStore))))
+            {
+                PROPVARIANT titleValue {};
+                titleValue.vt = VT_LPWSTR;
+                if (SUCCEEDED(::SHStrDupW(title.toStdWString().c_str(), &titleValue.pwszVal)))
+                {
+                    propStore->SetValue(pkeyTitle, titleValue);
+                    propStore->Commit();
+                    ::PropVariantClear(&titleValue);
+                }
+                propStore->Release();
+            }
+
+            tasks->AddObject(link);
+            link->Release();
+        };
+
+        addTask(tr("Add Torrent Link..."), u"@showAddTorrentLink"_s);
+        addTask(tr("Resume Session"), u"@resumeSession"_s);
+        addTask(tr("Pause Session"), u"@pauseSession"_s);
+
+        IObjectArray *taskArray = nullptr;
+        if (SUCCEEDED(tasks->QueryInterface(IID_PPV_ARGS(&taskArray))))
+        {
+            destList->AddUserTasks(taskArray);
+            taskArray->Release();
+        }
+        tasks->Release();
+    }
+
+    destList->CommitList();
+    destList->Release();
 }
 
 bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, qintptr *result)
@@ -1827,6 +1973,18 @@ void MainWindow::loadSessionStats()
     refreshTrayIconTooltip();
 #endif  // Q_OS_MACOS
 
+    if (m_speedGraph)
+    {
+        // No disk write-rate metric is exposed, so approximate total disk I/O
+        // as writes (~= downloads) + reads (~= uploads).
+        const qint64 diskIO = status.payloadDownloadRate + status.payloadUploadRate;
+        m_speedGraph->addSample(status.payloadDownloadRate, status.payloadUploadRate, diskIO);
+    }
+
+#ifdef Q_OS_WIN
+    updateTaskbarProgress();
+#endif
+
     refreshWindowTitle();
 }
 
@@ -1932,6 +2090,50 @@ void MainWindow::on_actionSpeedInTitleBar_triggered()
     m_displaySpeedInTitle = static_cast<QAction *>(sender())->isChecked();
     Preferences::instance()->showSpeedInTitleBar(m_displaySpeedInTitle);
     refreshWindowTitle();
+}
+
+void MainWindow::on_actionCompactRows_triggered(const bool checked)
+{
+    m_storeCompactRows = checked;
+    m_transferListWidget->setProperty("compact", checked);
+    // Re-polish so the TransferListWidget[compact="true"] stylesheet rule and
+    // the denser row padding take effect immediately.
+    m_transferListWidget->style()->unpolish(m_transferListWidget);
+    m_transferListWidget->style()->polish(m_transferListWidget);
+    m_transferListWidget->update();
+    m_transferListWidget->doItemsLayout();
+}
+
+void MainWindow::on_actionShowSpeedGraph_triggered(const bool checked)
+{
+    m_storeSpeedGraphVisible = checked;
+    if (m_speedGraph)
+    {
+        m_speedGraph->setVisible(checked);
+        positionSpeedGraph();
+    }
+}
+
+void MainWindow::positionSpeedGraph()
+{
+    if (!m_speedGraph || !m_transferListWidget)
+        return;
+
+    const int margin = 10;
+    const int x = m_transferListWidget->width() - m_speedGraph->width() - margin;
+    const int y = m_transferListWidget->height() - m_speedGraph->height() - margin;
+    m_speedGraph->move(std::max(0, x), std::max(0, y));
+    m_speedGraph->raise();
+}
+
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    if ((watched == m_transferListWidget)
+        && ((event->type() == QEvent::Resize) || (event->type() == QEvent::Show)))
+    {
+        positionSpeedGraph();
+    }
+    return GUIApplicationComponent<QMainWindow>::eventFilter(watched, event);
 }
 
 void MainWindow::on_actionRSSReader_triggered()
