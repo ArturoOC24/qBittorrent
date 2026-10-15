@@ -82,6 +82,13 @@ namespace Ui
     class MainWindow;
 }
 
+#ifdef Q_OS_WIN
+namespace QWK
+{
+    class WindowBar;
+}
+#endif
+
 class MainWindow final : public GUIApplicationComponent<QMainWindow>
 {
     Q_OBJECT
@@ -211,6 +218,8 @@ private:
 #ifdef Q_OS_WIN
     void installPython();
     bool verifyPythonInstaller(const Path &installerPath) const;
+    void installWindowAgent();
+    bool nativeEvent(const QByteArray &eventType, void *message, qintptr *result) override;
 #endif
 
 #ifdef ENABLE_PLUGINS
@@ -254,6 +263,7 @@ private:
     QAction *m_queueSeparator = nullptr;
     QAction *m_queueSeparatorMenu = nullptr;
     QSplitter *m_splitter = nullptr;
+    QWidget *m_transfersTab = nullptr;
     QPointer<SearchWidget> m_searchWidget;
     QPointer<RSSWidget> m_rssWidget;
     QPointer<ExecutionLogWidget> m_executionLog;
@@ -275,6 +285,10 @@ private:
 #ifdef Q_OS_MACOS
     std::unique_ptr<MacUtils::Badger> m_badger;
     std::unique_ptr<MacUtils::StatusItem> m_statusItem;
+#endif
+
+#ifdef Q_OS_WIN
+    QWK::WindowBar *m_windowBar = nullptr;
 #endif
 
     QHash<QString, QAction *> m_pluginActions;

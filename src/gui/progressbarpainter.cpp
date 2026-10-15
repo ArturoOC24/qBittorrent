@@ -29,14 +29,11 @@
 
 #include "progressbarpainter.h"
 
+#include <QApplication>
 #include <QPainter>
-#include <QPalette>
-#include <QStyleOptionProgressBar>
+#include <QPainterPath>
+#include <QStyle>
 #include <QStyleOptionViewItem>
-
-#if (defined(Q_OS_WIN) || defined(Q_OS_MACOS))
-#include <QProxyStyle>
-#endif
 
 #include "base/global.h"
 #include "gui/uithememanager.h"
@@ -44,47 +41,45 @@
 ProgressBarPainter::ProgressBarPainter(QObject *parent)
     : QObject(parent)
 {
-#if (defined(Q_OS_WIN) || defined(Q_OS_MACOS))
-    auto *fusionStyle = new QProxyStyle(u"fusion"_s);
-    fusionStyle->setParent(&m_dummyProgressBar);
-    m_dummyProgressBar.setStyle(fusionStyle);
-#endif
-
     applyUITheme();
     connect(UIThemeManager::instance(), &UIThemeManager::themeChanged, this, &ProgressBarPainter::applyUITheme);
 }
 
 void ProgressBarPainter::paint(QPainter *painter, const QStyleOptionViewItem &option, const QString &text, const int progress, const QColor &color) const
 {
-    QStyleOptionProgressBar styleOption;
-    styleOption.initFrom(&m_dummyProgressBar);
-    // QStyleOptionProgressBar fields
-    styleOption.maximum = 100;
-    styleOption.minimum = 0;
-    styleOption.progress = progress;
-    styleOption.text = text;
-    styleOption.textVisible = true;
-    // QStyleOption fields
-    styleOption.rect = option.rect.adjusted(0, 1, 0, -1);
-    // Qt 6 requires QStyle::State_Horizontal to be set for correctly drawing horizontal progress bar
-    styleOption.state = option.state | QStyle::State_Horizontal;
-
-    const bool isEnabled = option.state.testFlag(QStyle::State_Enabled);
-    styleOption.palette.setCurrentColorGroup(isEnabled ? QPalette::Active : QPalette::Disabled);
-
-    if (color.isValid())
-    {
-        styleOption.palette.setColor(QPalette::Highlight, color);
-    }
-    else if (m_chunkColor.isValid())
-    {
-        styleOption.palette.setColor(QPalette::Highlight, m_chunkColor);
-    }
-
     painter->save();
-    const QStyle *style = m_dummyProgressBar.style();
+
+    // Selection/hover background behind the bar
+    const QStyle *style = option.widget ? option.widget->style() : QApplication::style();
     style->drawPrimitive(QStyle::PE_PanelItemViewItem, &option, painter, option.widget);
-    style->drawControl(QStyle::CE_ProgressBar, &styleOption, painter, &m_dummyProgressBar);
+
+    // Flat rounded bar: dark groove, accent fill, centered percentage text
+    const QRect barRect = option.rect.adjusted(4, 4, -4, -4);
+    const qreal radius = 4;
+
+    painter->setRenderHint(QPainter::Antialiasing);
+    painter->setPen(Qt::NoPen);
+    painter->setBrush(QColor(0x3D4450));
+    painter->drawRoundedRect(barRect, radius, radius);
+
+    if (progress > 0)
+    {
+        QColor fill = color.isValid() ? color : m_chunkColor;
+        if (!fill.isValid())
+            fill = QColor(0x2F81F7);
+
+        const int fillWidth = std::max<int>((barRect.width() * progress) / 100, (2 * radius));
+        QPainterPath clipPath;
+        clipPath.addRoundedRect(barRect, radius, radius);
+        painter->setClipPath(clipPath);
+        painter->setBrush(fill);
+        painter->drawRoundedRect(QRect(barRect.left(), barRect.top(), fillWidth, barRect.height()), radius, radius);
+        painter->setClipping(false);
+    }
+
+    painter->setPen(QColor(0xE6EDF3));
+    painter->drawText(option.rect, Qt::AlignCenter, text);
+
     painter->restore();
 }
 

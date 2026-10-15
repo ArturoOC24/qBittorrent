@@ -59,8 +59,15 @@
 #include <QTimer>
 
 #ifdef Q_OS_WIN
+#include <Windows.h>
+#include <windowsx.h>
+#include <dwmapi.h>
+#include <shlwapi.h>
 #include <QCryptographicHash>
 #include <QScopeGuard>
+#include <QToolButton>
+#include "widgetframe/windowbar.h"
+#include "widgetframe/windowbutton.h"
 #endif
 
 #include "base/bittorrent/session.h"
@@ -259,26 +266,39 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
 
     m_columnFilterWidget = new QWidget(this);
     m_columnFilterWidget->setLayout(columnFilterLayout);
-    m_columnFilterAction = m_ui->toolBar->insertWidget(m_ui->actionLock, m_columnFilterWidget);
-
-    auto *spacer = new QWidget(this);
-    spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    m_ui->toolBar->insertWidget(m_columnFilterAction, spacer);
+    // The column filter lives in a top bar above the transfer list (see below),
+    // not in the toolbar - the toolbar is docked vertically on the left and a
+    // 200px search box there would make the whole toolbar column very wide.
 
     // Transfer List tab
     m_transferListWidget = new TransferListWidget(app, this);
     m_propertiesWidget = new PropertiesWidget(hSplitter);
+    m_propertiesWidget->setObjectName(u"propertiesPanel"_s);
     connect(m_transferListWidget, &TransferListWidget::currentTorrentChanged, m_propertiesWidget, &PropertiesWidget::loadTorrentInfos);
-    connect(m_propertiesWidget, &PropertiesWidget::openAdvancedSettingsLinkActivated, this, [this]
-    {
-        on_actionOptions_triggered();
-        m_options->showSpeedWidgetSetting();
-    });
     hSplitter->addWidget(m_transferListWidget);
     hSplitter->addWidget(m_propertiesWidget);
     m_splitter->addWidget(hSplitter);
     m_splitter->setCollapsible(0, false);
-    m_tabs->addTab(m_splitter,
+
+    // Top filter bar above the transfer list holds the column filter (search
+    // box + "Filter by"). columnFilterSpacer (added first in columnFilterLayout)
+    // pushes the controls to the right edge, above the list.
+    auto *filterBar = new QWidget(this);
+    filterBar->setObjectName(u"filterBar"_s);
+    filterBar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    auto *filterBarLayout = new QHBoxLayout(filterBar);
+    filterBarLayout->setContentsMargins(6, 4, 6, 4);
+    filterBarLayout->setSpacing(6);
+    filterBarLayout->addWidget(m_columnFilterWidget);
+
+    m_transfersTab = new QWidget(this);
+    auto *transfersLayout = new QVBoxLayout(m_transfersTab);
+    transfersLayout->setContentsMargins(0, 0, 0, 0);
+    transfersLayout->setSpacing(0);
+    transfersLayout->addWidget(filterBar);
+    transfersLayout->addWidget(m_splitter);
+
+    m_tabs->addTab(m_transfersTab,
 #ifndef Q_OS_MACOS
         UIThemeManager::instance()->getIcon(u"folder-remote"_s),
 #endif
@@ -549,6 +569,10 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     populatePluginsMenu();
 #endif
 
+#ifdef Q_OS_WIN
+    installWindowAgent();
+#endif
+
     qDebug("GUI Built");
 }
 
@@ -556,6 +580,285 @@ MainWindow::~MainWindow()
 {
     delete m_ui;
 }
+
+#ifdef Q_OS_WIN
+void MainWindow::installWindowAgent()
+{
+    // Collect menus before the old menu bar is removed by setMenuWidget().
+    QList<QMenu *> menus;
+    for (QAction *action : menuBar()->actions())
+    {
+        if (QMenu *m = action->menu())
+            menus.append(m);
+    }
+
+    // Build the custom title bar strip.
+    auto *windowBar = new QWK::WindowBar();
+    windowBar->setHostWidget(this);
+    windowBar->setTitleFollowWindow(true);
+
+    auto *minBtn = new QWK::WindowButton();
+    minBtn->setObjectName(u"min-button"_s);
+    minBtn->setProperty("system-button", true);
+    minBtn->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+
+    auto *maxBtn = new QWK::WindowButton();
+    maxBtn->setObjectName(u"max-button"_s);
+    maxBtn->setProperty("system-button", true);
+    maxBtn->setCheckable(true);
+    maxBtn->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+
+    auto *closeBtn = new QWK::WindowButton();
+    closeBtn->setObjectName(u"close-button"_s);
+    closeBtn->setProperty("system-button", true);
+    closeBtn->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+
+    windowBar->setMinButton(minBtn);
+    windowBar->setMaxButton(maxBtn);
+    windowBar->setCloseButton(closeBtn);
+
+    // App-menu button: qBittorrent icon + name, opens popup containing all menus.
+    auto *appBtn = new QToolButton(windowBar);
+    appBtn->setObjectName(u"app-menu-button"_s);
+    appBtn->setIcon(UIThemeManager::instance()->getIcon(u"qbittorrent"_s));
+    appBtn->setIconSize(QSize(22, 22));
+    appBtn->setText(u"   qBittorrent"_s);
+    appBtn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    appBtn->setPopupMode(QToolButton::InstantPopup);
+
+    auto *appMenu = new QMenu(appBtn);
+    for (QMenu *m : menus)
+    {
+        m->setParent(appMenu, m->windowFlags()); // preserve Qt::Popup flag
+        appMenu->addMenu(m);
+    }
+    appBtn->setMenu(appMenu);
+
+    // Use the icon-button slot (layout index 0). Never insert extra widgets
+    // into the bar layout directly: WindowBar's accessors (maxButton() etc.)
+    // look widgets up by fixed layout index and would return the wrong one.
+    windowBar->setIconButton(appBtn);
+
+    // setMenuWidget() replaces the native menu bar and schedules its deletion.
+    setMenuWidget(windowBar);
+
+    connect(windowBar, &QWK::WindowBar::minimizeRequested, this, &QWidget::showMinimized);
+    connect(windowBar, &QWK::WindowBar::maximizeRequested, this, [this, maxBtn](bool max)
+    {
+        if (max)
+            showMaximized();
+        else
+            showNormal();
+        QEvent e(QEvent::Leave);
+        QCoreApplication::sendEvent(maxBtn, &e);
+    });
+    connect(windowBar, &QWK::WindowBar::closeRequested, this, &QWidget::close);
+
+    m_windowBar = windowBar;
+
+    // Native frameless setup: keep WS_CAPTION | WS_THICKFRAME so DWM still
+    // provides the shadow, Aero Snap and minimize/restore animations; the
+    // visible frame itself is removed in WM_NCCALCSIZE (see nativeEvent()).
+    const HWND hwnd = reinterpret_cast<HWND>(winId());
+    const LONG_PTR style = ::GetWindowLongPtrW(hwnd, GWL_STYLE);
+    // WS_SYSMENU is required for the min/max boxes to be "active" so Windows 11
+    // engages the Snap Layouts flyout on the maximize button (HTMAXBUTTON).
+    ::SetWindowLongPtrW(hwnd, GWL_STYLE, style | WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX);
+    // No DwmExtendFrameIntoClientArea: the resize frame kept in WM_NCCALCSIZE
+    // already gives the DWM shadow + rounded corners, and extending the frame
+    // interferes with the Snap Layouts caption detection in windowed mode.
+    ::SetWindowPos(hwnd, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+}
+
+bool MainWindow::nativeEvent(const QByteArray &eventType, void *message, qintptr *result)
+{
+    if ((eventType == "windows_generic_MSG") && m_windowBar)
+    {
+        MSG *msg = static_cast<MSG *>(message);
+        switch (msg->message)
+        {
+        case WM_NCCALCSIZE:
+            {
+                if (!msg->wParam)
+                    break;
+
+                // Keep the standard resize frame on the left/right/bottom (so
+                // DWM still manages the caption - required for Snap Layouts and
+                // the maximize-button flyout) but reclaim the top edge for our
+                // custom title bar. When maximized the window overhangs the
+                // screen by the frame width, so inset the top back too.
+                auto *params = reinterpret_cast<NCCALCSIZE_PARAMS *>(msg->lParam);
+                RECT &rect = params->rgrc[0];
+                const int frameX = ::GetSystemMetrics(SM_CXFRAME) + ::GetSystemMetrics(SM_CXPADDEDBORDER);
+                const int frameY = ::GetSystemMetrics(SM_CYFRAME) + ::GetSystemMetrics(SM_CXPADDEDBORDER);
+                rect.left += frameX;
+                rect.right -= frameX;
+                rect.bottom -= frameY;
+                if (::IsZoomed(msg->hwnd))
+                    rect.top += frameY;
+
+                *result = 0;
+                return true;
+            }
+        case WM_NCHITTEST:
+            {
+                const QPoint globalCursor {GET_X_LPARAM(msg->lParam), GET_Y_LPARAM(msg->lParam)};
+                RECT wndRect;
+                ::GetWindowRect(msg->hwnd, &wndRect);
+
+                const bool maximized = ::IsZoomed(msg->hwnd);
+                const int rb = ::GetSystemMetrics(SM_CXSIZEFRAME) + ::GetSystemMetrics(SM_CXPADDEDBORDER);
+
+                const bool nearLeft = !maximized && (globalCursor.x() < (wndRect.left + rb));
+                const bool nearRight = !maximized && (globalCursor.x() >= (wndRect.right - rb));
+                const bool nearTop = !maximized && (globalCursor.y() < (wndRect.top + rb));
+                const bool nearBottom = !maximized && (globalCursor.y() >= (wndRect.bottom - rb));
+
+                // Corners take priority (resize)
+                if (nearTop && nearLeft) { *result = HTTOPLEFT; return true; }
+                if (nearTop && nearRight) { *result = HTTOPRIGHT; return true; }
+                if (nearBottom && nearLeft) { *result = HTBOTTOMLEFT; return true; }
+                if (nearBottom && nearRight) { *result = HTBOTTOMRIGHT; return true; }
+
+                // Top resize edge takes priority over the title-bar drag band:
+                // the thin strip at the very top (rb px) must resize, otherwise
+                // the title bar swallows it and the top edge can't be dragged.
+                if (nearTop) { *result = HTTOP; return true; }
+
+                // Title bar band: use the window bar's own geometry so the drag
+                // band and the child hit-testing share one coordinate system.
+                const qreal dpr = devicePixelRatioF();
+                POINT clientPt {globalCursor.x(), globalCursor.y()};
+                ::ScreenToClient(msg->hwnd, &clientPt);
+                const QPoint logicalInWindow {qRound(clientPt.x / dpr), qRound(clientPt.y / dpr)};
+
+                const QRect barGeo {m_windowBar->mapTo(this, QPoint(0, 0)), m_windowBar->size()};
+                if (barGeo.contains(logicalInWindow))
+                {
+                    // Maximize button reports HTMAXBUTTON so Windows 11 shows
+                    // its Snap Layouts flyout on hover.
+                    if (QAbstractButton *maxButton = m_windowBar->maxButton()
+                        ; maxButton && maxButton->isVisible())
+                    {
+                        const QRect maxRect {maxButton->mapTo(this, QPoint(0, 0)), maxButton->size()};
+                        if (maxRect.contains(logicalInWindow))
+                        {
+                            *result = HTMAXBUTTON;
+                            return true;
+                        }
+                    }
+
+                    // Interactive only when directly over one of the title bar buttons.
+                    bool interactive = false;
+                    const QList<QAbstractButton *> buttons = m_windowBar->findChildren<QAbstractButton *>();
+                    for (QAbstractButton *btn : buttons)
+                    {
+                        if (!btn->isVisible())
+                            continue;
+                        const QRect btnRect {btn->mapTo(this, QPoint(0, 0)), btn->size()};
+                        if (btnRect.contains(logicalInWindow))
+                        {
+                            interactive = true;
+                            break;
+                        }
+                    }
+
+                    *result = interactive ? HTCLIENT : HTCAPTION;
+                    return true;
+                }
+
+                // Remaining resize edges (below the title bar)
+                if (nearLeft) { *result = HTLEFT; return true; }
+                if (nearRight) { *result = HTRIGHT; return true; }
+                if (nearBottom) { *result = HTBOTTOM; return true; }
+                if (nearTop) { *result = HTTOP; return true; }
+
+                // Everything else is plain client area. Never fall through to
+                // DefWindowProc here: with WS_CAPTION kept it still computes
+                // phantom caption-button zones at the top of the window,
+                // hijacking clicks meant for our own buttons.
+                *result = HTCLIENT;
+                return true;
+            }
+        case WM_NCLBUTTONDOWN:
+            // Start the window move ourselves: with the custom frame, letting
+            // DefWindowProc handle the caption drag is unreliable in windowed
+            // mode (it works only while maximized).
+            if ((msg->wParam == HTCAPTION) && !::IsZoomed(msg->hwnd))
+            {
+                ::ReleaseCapture();
+                ::SendMessageW(msg->hwnd, WM_SYSCOMMAND, (SC_MOVE | 0x0002), msg->lParam);
+                *result = 0;
+                return true;
+            }
+            // Swallow the press on the maximize button; act on release.
+            if (msg->wParam == HTMAXBUTTON)
+            {
+                *result = 0;
+                return true;
+            }
+            break;
+        case WM_NCLBUTTONDBLCLK:
+            // Double-click the caption toggles maximize/restore
+            if ((msg->wParam == HTCAPTION) || (msg->wParam == HTMAXBUTTON))
+            {
+                if (isMaximized())
+                    showNormal();
+                else
+                    showMaximized();
+                *result = 0;
+                return true;
+            }
+            break;
+        case WM_NCLBUTTONUP:
+            // Click on the maximize button (Windows owns the mouse there)
+            if (msg->wParam == HTMAXBUTTON)
+            {
+                if (isMaximized())
+                    showNormal();
+                else
+                    showMaximized();
+                *result = 0;
+                return true;
+            }
+            break;
+        case WM_NCMOUSEMOVE:
+            // Windows owns the mouse over HTMAXBUTTON, so Qt never sees the
+            // hover - emulate it here. wParam carries the hit-test code.
+            if (QAbstractButton *maxButton = m_windowBar->maxButton())
+            {
+                const bool hover = (msg->wParam == HTMAXBUTTON);
+                if (maxButton->property("ncHover").toBool() != hover)
+                {
+                    maxButton->setProperty("ncHover", hover);
+                    maxButton->style()->unpolish(maxButton);
+                    maxButton->style()->polish(maxButton);
+                    maxButton->update();
+                }
+                if (hover)
+                {
+                    TRACKMOUSEEVENT tme {sizeof(TRACKMOUSEEVENT), (TME_LEAVE | TME_NONCLIENT), msg->hwnd, 0};
+                    ::TrackMouseEvent(&tme);
+                }
+            }
+            break;
+        case WM_NCMOUSELEAVE:
+            if (QAbstractButton *maxButton = m_windowBar->maxButton()
+                ; maxButton && maxButton->property("ncHover").toBool())
+            {
+                maxButton->setProperty("ncHover", false);
+                maxButton->style()->unpolish(maxButton);
+                maxButton->style()->polish(maxButton);
+                maxButton->update();
+            }
+            break;
+        default:
+            break;
+        }
+    }
+    return GUIApplicationComponent<QMainWindow>::nativeEvent(eventType, message, result);
+}
+#endif // Q_OS_WIN
 
 bool MainWindow::isExecutionLogEnabled() const
 {
@@ -818,7 +1121,8 @@ void MainWindow::displaySearchTab(bool enable)
 
 void MainWindow::toggleFocusBetweenLineEdits()
 {
-    if (m_columnFilterEdit->hasFocus() && (m_propertiesWidget->tabBar()->currentIndex() == PropTabBar::FilesTab))
+    // Content/Files tab is index 4 in the QTabWidget-based properties panel.
+    if (m_columnFilterEdit->hasFocus() && (m_propertiesWidget->tabBar()->currentIndex() == 4))
     {
         m_propertiesWidget->contentFilterLine()->setFocus();
         m_propertiesWidget->contentFilterLine()->selectAll();
@@ -844,14 +1148,14 @@ void MainWindow::tabChanged([[maybe_unused]] const int newTab)
 {
     // We cannot rely on the index newTab
     // because the tab order is undetermined now
-    if (m_tabs->currentWidget() == m_splitter)
+    if (m_tabs->currentWidget() == m_transfersTab)
     {
         qDebug("Changed tab to transfer list, refreshing the list");
         m_propertiesWidget->loadDynamicData();
-        m_columnFilterAction->setVisible(true);
+        m_columnFilterWidget->setVisible(true);
         return;
     }
-    m_columnFilterAction->setVisible(false);
+    m_columnFilterWidget->setVisible(false);
 
     if (m_tabs->currentWidget() == m_searchWidget)
     {
@@ -980,7 +1284,7 @@ void MainWindow::createKeyboardShortcuts()
 // Keyboard shortcuts slots
 void MainWindow::displayTransferTab() const
 {
-    m_tabs->setCurrentWidget(m_splitter);
+    m_tabs->setCurrentWidget(m_transfersTab);
 }
 
 void MainWindow::displaySearchTab()

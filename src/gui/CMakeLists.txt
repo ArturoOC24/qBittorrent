@@ -81,6 +81,7 @@ add_library(qbt_gui STATIC
     properties/peerlistwidget.h
     properties/peersadditiondialog.h
     properties/pieceavailabilitybar.h
+    properties/piecemapwidget.h
     properties/piecesbar.h
     properties/propertieswidget.h
     properties/proptabbar.h
@@ -187,6 +188,7 @@ add_library(qbt_gui STATIC
     properties/peerlistwidget.cpp
     properties/peersadditiondialog.cpp
     properties/pieceavailabilitybar.cpp
+    properties/piecemapwidget.cpp
     properties/piecesbar.cpp
     properties/propertieswidget.cpp
     properties/proptabbar.cpp
@@ -333,5 +335,13 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
         powermanagement/inhibitorwindows.cpp
         programupdater.h
         programupdater.cpp
+        widgetframe/windowbar.h
+        widgetframe/windowbar_p.h
+        widgetframe/windowbar.cpp
+        widgetframe/windowbutton.h
+        widgetframe/windowbutton_p.h
+        widgetframe/windowbutton.cpp
     )
+    target_link_libraries(qbt_gui PRIVATE dwmapi ole32 shlwapi)
+    target_include_directories(qbt_gui PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/widgetframe)
 endif()

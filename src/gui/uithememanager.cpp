@@ -124,11 +124,13 @@ UIThemeManager::UIThemeManager()
     if (!m_themeSource)
         m_themeSource = std::make_unique<DefaultThemeSource>();
 
+    // The default theme now ships a modern dark stylesheet, so apply the
+    // stylesheet unconditionally. The palette is still only overridden for a
+    // user-selected custom theme; the default look relies on the dark color
+    // scheme (see colorScheme() default) for palette/text colors.
     if (m_useCustomTheme)
-    {
         applyPalette();
-        applyStyleSheet();
-    }
+    applyStyleSheet();
 }
 
 UIThemeManager *UIThemeManager::instance()
@@ -139,7 +141,10 @@ UIThemeManager *UIThemeManager::instance()
 #ifdef QBT_HAS_COLORSCHEME_OPTION
 ColorScheme UIThemeManager::colorScheme() const
 {
-    return m_colorSchemeSetting.get(ColorScheme::System);
+    // Modern UI fork: default to the dark color scheme so the dark stylesheet
+    // has matching palette/text colors regardless of the OS setting. Users can
+    // still switch to Light/System in the options.
+    return m_colorSchemeSetting.get(ColorScheme::Dark);
 }
 
 void UIThemeManager::setColorScheme(const ColorScheme value)

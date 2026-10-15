@@ -15,23 +15,26 @@
     <number>0</number>
    </property>
    <property name="leftMargin">
-    <number>0</number>
+    <number>10</number>
    </property>
    <property name="topMargin">
     <number>0</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>10</number>
    </property>
    <property name="bottomMargin">
     <number>0</number>
    </property>
    <item>
-    <widget class="QStackedWidget" name="stackedProperties">
-     <property name="currentIndex">
-      <number>0</number>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="tabPosition">
+      <enum>QTabWidget::TabPosition::South</enum>
      </property>
      <widget class="QWidget" name="pageGeneral">
+      <attribute name="title">
+       <string>General</string>
+      </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_7">
        <property name="leftMargin">
         <number>0</number>
@@ -1007,6 +1010,9 @@
       </layout>
      </widget>
      <widget class="QWidget" name="pageTrackers">
+      <attribute name="title">
+       <string>Trackers</string>
+      </attribute>
       <layout class="QHBoxLayout" name="hBoxLayoutTrackers">
        <property name="leftMargin">
         <number>0</number>
@@ -1059,6 +1065,9 @@
       </layout>
      </widget>
      <widget class="QWidget" name="pagePeers">
+      <attribute name="title">
+       <string>Peers</string>
+      </attribute>
       <layout class="QVBoxLayout" name="vBoxLayoutPeerPage">
        <property name="leftMargin">
         <number>0</number>
@@ -1075,6 +1084,9 @@
       </layout>
      </widget>
      <widget class="QWidget" name="pageSources">
+      <attribute name="title">
+       <string>HTTP Sources</string>
+      </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_9">
        <property name="leftMargin">
         <number>0</number>
@@ -1101,6 +1113,9 @@
       </layout>
      </widget>
      <widget class="QWidget" name="pageContents">
+      <attribute name="title">
+       <string>Content</string>
+      </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <property name="spacing">
         <number>3</number>
@@ -1164,22 +1179,6 @@
          </property>
         </widget>
        </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="pageSpeed">
-      <layout class="QVBoxLayout" name="speedLayout">
-       <property name="leftMargin">
-        <number>0</number>
-       </property>
-       <property name="topMargin">
-        <number>0</number>
-       </property>
-       <property name="rightMargin">
-        <number>0</number>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
       </layout>
      </widget>
     </widget>

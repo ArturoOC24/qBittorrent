@@ -29,6 +29,8 @@
 
 #include "propertieswidget.h"
 
+#include <functional>
+
 #include <QClipboard>
 #include <QDateTime>
 #include <QDebug>
@@ -38,6 +40,7 @@
 #include <QMessageBox>
 #include <QPointer>
 #include <QSplitter>
+#include <QVariantAnimation>
 #include <QShortcut>
 #include <QStackedWidget>
 #include <QUrl>
@@ -58,11 +61,8 @@
 #include "gui/uithememanager.h"
 #include "gui/utils.h"
 #include "gui/utils/keysequence.h"
-#include "downloadedpiecesbar.h"
 #include "peerlistwidget.h"
-#include "pieceavailabilitybar.h"
-#include "proptabbar.h"
-#include "speedwidget.h"
+#include "piecemapwidget.h"
 #include "ui_propertieswidget.h"
 
 PropertiesWidget::PropertiesWidget(QWidget *parent)
@@ -83,7 +83,7 @@ PropertiesWidget::PropertiesWidget(QWidget *parent)
     m_contentFilterLine->setFixedWidth(300);
     m_contentFilterLine->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(m_contentFilterLine, &QWidget::customContextMenuRequested, this, &PropertiesWidget::showContentFilterContextMenu);
-    connect(m_contentFilterLine, &LineEdit::textUpdated, this, &PropertiesWidget::setContentFilterPattern);
+    connect(m_contentFilterLine, &LineEdit::textChanged, this, &PropertiesWidget::setContentFilterPattern);
     m_ui->contentFilterLayout->insertWidget(3, m_contentFilterLine);
 
     m_ui->filesList->setContentDragAllowed(true);
@@ -94,26 +94,28 @@ PropertiesWidget::PropertiesWidget(QWidget *parent)
     connect(m_ui->selectAllButton, &QPushButton::clicked, m_ui->filesList, &TorrentContentWidget::checkAll);
     connect(m_ui->selectNoneButton, &QPushButton::clicked, m_ui->filesList, &TorrentContentWidget::checkNone);
     connect(m_ui->listWebSeeds, &QWidget::customContextMenuRequested, this, &PropertiesWidget::displayWebSeedListMenu);
-    connect(m_ui->stackedProperties, &QStackedWidget::currentChanged, this, &PropertiesWidget::loadDynamicData);
+    connect(m_ui->tabWidget, &QTabWidget::currentChanged, this, &PropertiesWidget::loadDynamicData);
     connect(BitTorrent::Session::instance(), &BitTorrent::Session::torrentSavePathChanged, this, &PropertiesWidget::updateSavePath);
     connect(m_ui->filesList, &TorrentContentWidget::stateChanged, this, &PropertiesWidget::saveSettings);
 
-    // set bar height relative to screen dpi
-    const int barHeight = 18;
+    // Allow the panel to collapse to zero height (the toggle handle lives on
+    // the splitter, so it stays reachable when the panel is hidden)
+    setMinimumHeight(0);
 
-    // Downloaded pieces progress bar
+    // Hide labels from the old two-bar layout - replaced by the 2D piece map
     m_ui->tempProgressBarArea->setVisible(false);
-    m_downloadedPieces = new DownloadedPiecesBar(this);
-    m_ui->groupBarLayout->addWidget(m_downloadedPieces, 0, 1);
-    m_downloadedPieces->setFixedHeight(barHeight);
-    m_downloadedPieces->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-
-    // Pieces availability bar
     m_ui->tempAvailabilityBarArea->setVisible(false);
-    m_piecesAvailability = new PieceAvailabilityBar(this);
-    m_ui->groupBarLayout->addWidget(m_piecesAvailability, 1, 1);
-    m_piecesAvailability->setFixedHeight(barHeight);
-    m_piecesAvailability->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    m_ui->labelDownloadedPieces->setVisible(false);
+    m_ui->labelProgressVal->setVisible(false);
+    m_ui->labelPiecesAvailability->setVisible(false);
+    m_ui->labelAverageAvailabilityVal->setVisible(false);
+    m_ui->lineBelowBars->setVisible(false);
+
+    // 2D piece map - occupies rows 0-1, all columns
+    m_pieceMap = new PieceMapWidget(this);
+    m_ui->groupBarLayout->addWidget(m_pieceMap, 0, 0, 2, 2);
+    m_pieceMap->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_pieceMap->setMinimumHeight(80);
 
     // Tracker list
     m_trackerList = new TrackerListWidget(this);
@@ -127,14 +129,7 @@ PropertiesWidget::PropertiesWidget(QWidget *parent)
     // Peers list
     m_peerList = new PeerListWidget(this);
     m_ui->vBoxLayoutPeerPage->addWidget(m_peerList);
-    // Tab bar
-    m_tabBar = new PropTabBar(nullptr);
-    m_tabBar->setContentsMargins(0, 5, 0, 5);
-    m_ui->verticalLayout->addLayout(m_tabBar);
-    connect(m_tabBar, &PropTabBar::tabChanged, m_ui->stackedProperties, &QStackedWidget::setCurrentIndex);
-    connect(m_tabBar, &PropTabBar::tabChanged, this, &PropertiesWidget::saveSettings);
-    connect(m_tabBar, &PropTabBar::visibilityToggled, this, &PropertiesWidget::setVisibility);
-    connect(m_tabBar, &PropTabBar::visibilityToggled, this, &PropertiesWidget::saveSettings);
+    connect(m_ui->tabWidget, &QTabWidget::currentChanged, this, &PropertiesWidget::saveSettings);
 
     const auto *editWebSeedsHotkey = new QShortcut(Qt::Key_F2, m_ui->listWebSeeds, nullptr, nullptr, Qt::WidgetShortcut);
     connect(editWebSeedsHotkey, &QShortcut::activated, this, &PropertiesWidget::editWebSeed);
@@ -148,60 +143,70 @@ PropertiesWidget::PropertiesWidget(QWidget *parent)
 
 PropertiesWidget::~PropertiesWidget()
 {
-    delete m_tabBar;
     delete m_ui;
 }
 
-void PropertiesWidget::showPiecesAvailability(bool show)
+void PropertiesWidget::showPiecesAvailability([[maybe_unused]] bool show)
 {
-    m_ui->labelPiecesAvailability->setVisible(show);
-    m_piecesAvailability->setVisible(show);
-    m_ui->labelAverageAvailabilityVal->setVisible(show);
-    if (show || !m_downloadedPieces->isVisible())
-        m_ui->lineBelowBars->setVisible(show);
 }
 
-void PropertiesWidget::showPiecesDownloaded(bool show)
+void PropertiesWidget::showPiecesDownloaded([[maybe_unused]] bool show)
 {
-    m_ui->labelDownloadedPieces->setVisible(show);
-    m_downloadedPieces->setVisible(show);
-    m_ui->labelProgressVal->setVisible(show);
-    if (show || !m_piecesAvailability->isVisible())
-        m_ui->lineBelowBars->setVisible(show);
+}
+
+namespace
+{
+    // Smoothly animates the bottom pane of a two-widget splitter
+    void animateSplitterBottom(QSplitter *splitter, const int targetBottom, QObject *context, const std::function<void ()> &onFinished = {})
+    {
+        const QList<int> current = splitter->sizes();
+        const int total = current[0] + current[1];
+
+        auto *animation = new QVariantAnimation(context);
+        animation->setDuration(180);
+        animation->setEasingCurve(QEasingCurve::OutCubic);
+        animation->setStartValue(current[1]);
+        animation->setEndValue(targetBottom);
+        QObject::connect(animation, &QVariantAnimation::valueChanged, context, [splitter, total](const QVariant &value)
+        {
+            const int bottom = value.toInt();
+            splitter->setSizes({(total - bottom), bottom});
+        });
+        if (onFinished)
+            QObject::connect(animation, &QVariantAnimation::finished, context, onFinished);
+        animation->start(QAbstractAnimation::DeleteWhenStopped);
+    }
 }
 
 void PropertiesWidget::setVisibility(const bool visible)
 {
     if (!visible && (m_state == VISIBLE))
     {
-        const int tabBarHeight = m_tabBar->geometry().height(); // take height before hiding
+        // Fully collapse: the panel (tabs included) shrinks to zero height,
+        // leaving only the toggle pill on the splitter handle
         auto *hSplitter = static_cast<QSplitter *>(parentWidget());
-        m_ui->stackedProperties->setVisible(false);
         m_slideSizes = hSplitter->sizes();
-        hSplitter->handle(1)->setVisible(false);
-        hSplitter->handle(1)->setDisabled(true);
-        m_handleWidth = hSplitter->handleWidth();
-        hSplitter->setHandleWidth(0);
-        const QList<int> sizes {(hSplitter->geometry().height() - tabBarHeight), tabBarHeight};
-        hSplitter->setSizes(sizes);
-        setMaximumSize(maximumSize().width(), tabBarHeight);
         m_state = REDUCED;
+        emit panelVisibilityChanged(false);
+        animateSplitterBottom(hSplitter, 0, this, [this]
+        {
+            setMaximumSize(maximumSize().width(), 0);
+        });
         return;
     }
 
     if (visible && (m_state == REDUCED))
     {
-        m_ui->stackedProperties->setVisible(true);
         auto *hSplitter = static_cast<QSplitter *>(parentWidget());
-        if (m_handleWidth != -1)
-            hSplitter->setHandleWidth(m_handleWidth);
-        hSplitter->handle(1)->setDisabled(false);
-        hSplitter->handle(1)->setVisible(true);
-        hSplitter->setSizes(m_slideSizes);
         m_state = VISIBLE;
         setMaximumSize(maximumSize().width(), QWIDGETSIZE_MAX);
-        // Force refresh
-        loadDynamicData();
+        const int targetBottom = (m_slideSizes.size() == 2) ? m_slideSizes[1] : (hSplitter->geometry().height() / 3);
+        emit panelVisibilityChanged(true);
+        animateSplitterBottom(hSplitter, targetBottom, this, [this]
+        {
+            // Force refresh
+            loadDynamicData();
+        });
     }
 }
 
@@ -238,8 +243,7 @@ void PropertiesWidget::clear()
     m_ui->labelLastSeenCompleteVal->clear();
     m_ui->labelCreatedByVal->clear();
     m_ui->labelAddedOnVal->clear();
-    m_downloadedPieces->clear();
-    m_piecesAvailability->clear();
+    m_pieceMap->clear();
     m_peerList->clear();
     m_contentFilterLine->clear();
 }
@@ -264,9 +268,14 @@ QTreeView *PropertiesWidget::getFilesList() const
     return m_ui->filesList;
 }
 
-PropTabBar *PropertiesWidget::tabBar() const
+QTabBar *PropertiesWidget::tabBar() const
 {
-    return m_tabBar;
+    return m_ui->tabWidget->tabBar();
+}
+
+bool PropertiesWidget::isPanelReduced() const
+{
+    return (m_state == REDUCED);
 }
 
 LineEdit *PropertiesWidget::contentFilterLine() const
@@ -306,8 +315,7 @@ void PropertiesWidget::loadTorrentInfos(BitTorrent::Torrent *const torrent)
 {
     clear();
     m_torrent = torrent;
-    m_downloadedPieces->setTorrent(m_torrent);
-    m_piecesAvailability->setTorrent(m_torrent);
+    m_pieceMap->setTorrent(m_torrent);
     m_trackerList->setTorrent(m_torrent);
     m_ui->filesList->setContentHandler(m_torrent);
     if (!m_torrent)
@@ -358,7 +366,7 @@ void PropertiesWidget::readSettings()
     const int currentTab = pref->getPropCurTab();
     const bool visible = pref->getPropVisible();
     m_ui->filesList->header()->restoreState(pref->getPropFileListState());
-    m_tabBar->setCurrentIndex(currentTab);
+    m_ui->tabWidget->setCurrentIndex(currentTab);
     if (!visible)
         setVisibility(false);
 }
@@ -379,7 +387,7 @@ void PropertiesWidget::saveSettings()
         pref->setPropSplitterSizes(QString::number(sizes.first()) + u',' + QString::number(sizes.last()));
     pref->setPropFileListState(m_ui->filesList->header()->saveState());
     // Remember current tab
-    pref->setPropCurTab(m_tabBar->currentIndex());
+    pref->setPropCurTab(m_ui->tabWidget->currentIndex());
 }
 
 void PropertiesWidget::reloadPreferences()
@@ -395,9 +403,9 @@ void PropertiesWidget::loadDynamicData()
     if (!m_torrent || (m_state != VISIBLE)) return;
 
     // Transfer infos
-    switch (m_ui->stackedProperties->currentIndex())
+    switch (m_ui->tabWidget->currentIndex())
     {
-    case PropTabBar::MainTab:
+    case 0: // General
         {
             m_ui->labelWastedVal->setText(Utils::Misc::friendlyUnit(m_torrent->wastedSize()));
 
@@ -428,7 +436,7 @@ void PropertiesWidget::loadDynamicData()
                                            .arg(m_torrent->connectionsCount())
                                            .arg(m_torrent->connectionsLimit() < 0 ? C_INFINITY : QString::number(m_torrent->connectionsLimit())));
 
-            m_ui->labelETAVal->setText(Utils::Misc::userFriendlyDuration(m_torrent->eta(), MAX_ETA, Utils::Misc::TimeResolution::Seconds));
+            m_ui->labelETAVal->setText(Utils::Misc::userFriendlyDuration(m_torrent->eta(), MAX_ETA));
 
             // Update next announce time
             m_ui->labelReannounceInVal->setText(Utils::Misc::userFriendlyDuration(m_torrent->nextAnnounce()));
@@ -477,7 +485,9 @@ void PropertiesWidget::loadDynamicData()
                             , [this, torrent = QPointer(m_torrent)](const QList<int> &pieceAvailability)
                     {
                         if (m_torrent && (m_torrent == torrent))
-                            m_piecesAvailability->setAvailability(pieceAvailability);
+                        {
+                                m_pieceMap->setAvailability(pieceAvailability);
+                        }
                     });
 
                     m_ui->labelAverageAvailabilityVal->setText(Utils::String::fromDouble(m_torrent->distributedCopies(), 3));
@@ -495,7 +505,9 @@ void PropertiesWidget::loadDynamicData()
                         , [this, torrent = QPointer(m_torrent)](const QBitArray &downloadingPieces)
                 {
                     if (m_torrent && (m_torrent == torrent))
-                        m_downloadedPieces->setProgress(m_torrent->pieces(), downloadingPieces);
+                    {
+                        m_pieceMap->setProgress(m_torrent->pieces(), downloadingPieces);
+                    }
                 });
             }
             else
@@ -504,11 +516,11 @@ void PropertiesWidget::loadDynamicData()
             }
         }
         break;
-    case PropTabBar::PeersTab:
+    case 2: // Peers
         // Load peers
         m_peerList->loadPeers(m_torrent);
         break;
-    case PropTabBar::FilesTab:
+    case 4: // Content
         m_ui->filesList->refresh();
         break;
     default:;
@@ -568,40 +580,6 @@ void PropertiesWidget::configure()
     // Torrent Content Widget
     m_ui->filesList->setContentDragEnabled(preferences->isTorrentContentDragEnabled());
 
-    // Speed widget
-    if (preferences->isSpeedWidgetEnabled())
-    {
-        if (!qobject_cast<SpeedWidget *>(m_speedWidget))
-        {
-            if (m_speedWidget)
-            {
-                m_ui->speedLayout->removeWidget(m_speedWidget);
-                delete m_speedWidget;
-            }
-
-            m_speedWidget = new SpeedWidget(this);
-            m_ui->speedLayout->addWidget(m_speedWidget);
-        }
-    }
-    else
-    {
-        if (!qobject_cast<QLabel *>(m_speedWidget))
-        {
-            if (m_speedWidget)
-            {
-                m_ui->speedLayout->removeWidget(m_speedWidget);
-                delete m_speedWidget;
-            }
-
-            const auto displayText = u"<center><b>%1</b><p><a href=\"#\">%2</a></p></center>"_s
-                .arg(tr("Speed graphs are disabled"), tr("You can enable it in Advanced Options"));
-            auto *label = new QLabel(displayText, this);
-            label->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
-            connect(label, &QLabel::linkActivated, this, &PropertiesWidget::openAdvancedSettingsLinkActivated);
-            m_speedWidget = label;
-            m_ui->speedLayout->addWidget(m_speedWidget);
-        }
-    }
 }
 
 void PropertiesWidget::askWebSeed()

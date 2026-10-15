@@ -31,8 +31,8 @@
 
 #include <QColor>
 #include <QObject>
-#include <QProgressBar>
 
+class QPainter;
 class QStyleOptionViewItem;
 
 class ProgressBarPainter : public QObject
@@ -49,6 +49,4 @@ private:
     void applyUITheme();
 
     QColor m_chunkColor;
-    // for painting progressbar with stylesheet option, a dummy progress bar is required
-    QProgressBar m_dummyProgressBar;
 };

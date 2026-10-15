@@ -35,14 +35,13 @@
 #include "base/settingvalue.h"
 #include "gui/filterpatternformat.h"
 
+class QTabBar;
 class QPushButton;
 class QTreeView;
 
-class DownloadedPiecesBar;
 class LineEdit;
 class PeerListWidget;
-class PieceAvailabilityBar;
-class PropTabBar;
+class PieceMapWidget;
 class TrackerListWidget;
 
 namespace BitTorrent
@@ -74,11 +73,12 @@ public:
     TrackerListWidget *getTrackerList() const;
     PeerListWidget *getPeerList() const;
     QTreeView *getFilesList() const;
-    PropTabBar *tabBar() const;
+    QTabBar *tabBar() const;
     LineEdit *contentFilterLine() const;
+    bool isPanelReduced() const;
 
 signals:
-    void openAdvancedSettingsLinkActivated();
+    void panelVisibilityChanged(bool visible);
 
 public slots:
     void setVisibility(bool visible);
@@ -113,11 +113,8 @@ private:
     SlideState m_state;
     PeerListWidget *m_peerList = nullptr;
     TrackerListWidget *m_trackerList = nullptr;
-    QWidget *m_speedWidget = nullptr;
     QList<int> m_slideSizes;
-    DownloadedPiecesBar *m_downloadedPieces = nullptr;
-    PieceAvailabilityBar *m_piecesAvailability = nullptr;
-    PropTabBar *m_tabBar = nullptr;
+    PieceMapWidget *m_pieceMap = nullptr;
     LineEdit *m_contentFilterLine = nullptr;
     int m_handleWidth = -1;
 
