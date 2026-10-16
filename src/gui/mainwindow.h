@@ -45,6 +45,7 @@ class QSplitter;
 class QString;
 class QTabWidget;
 class QTimer;
+class QToolButton;
 
 class AboutDialog;
 class DownloadFromURLDialog;
@@ -316,6 +317,7 @@ private:
 
 #ifdef Q_OS_WIN
     QWK::WindowBar *m_windowBar = nullptr;
+    QToolButton *m_appMenuButton = nullptr;
     ITaskbarList3 *m_taskbarList = nullptr;
 #endif
 

@@ -614,12 +614,12 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
 
     m_ui->actionShowSpeedGraph->setChecked(m_storeSpeedGraphVisible.get(true));
 
-    m_ui->actionShowFilterBar->setChecked(m_storeFilterBarVisible.get(true));
+    m_ui->actionShowFilterBar->setChecked(m_storeFilterBarVisible.get(false));
     if (m_filterBar)
-        m_filterBar->setVisible(m_storeFilterBarVisible.get(true));
+        m_filterBar->setVisible(m_storeFilterBarVisible.get(false));
 
-    m_ui->actionShowTabBar->setChecked(m_storeTabBarVisible.get(true));
-    static_cast<HidableTabWidget *>(m_tabs.data())->setTabBarForcedHidden(!m_storeTabBarVisible.get(true));
+    m_ui->actionShowTabBar->setChecked(m_storeTabBarVisible.get(false));
+    static_cast<HidableTabWidget *>(m_tabs.data())->setTabBarForcedHidden(!m_storeTabBarVisible.get(false));
 
     m_ui->actionShowStatusFilter->setChecked(m_storeStatusSectionVisible.get(true));
     m_ui->actionShowCategoriesFilter->setChecked(m_storeCategoriesSectionVisible.get(true));
@@ -698,6 +698,8 @@ void MainWindow::installWindowAgent()
         appMenu->addMenu(m);
     }
     appBtn->setMenu(appMenu);
+
+    m_appMenuButton = appBtn;
 
     // Use the icon-button slot (layout index 0). Never insert extra widgets
     // into the bar layout directly: WindowBar's accessors (maxButton() etc.)
@@ -2506,6 +2508,18 @@ void MainWindow::refreshWindowTitle()
             setWindowTitle(m_windowTitle);
         }
     }
+
+#ifdef Q_OS_WIN
+    // The custom title bar shows the app-menu button, not the OS window title,
+    // so reflect the "speed in title bar" option there to make it visible.
+    if (m_appMenuButton)
+    {
+        if (!btSession->isPaused() && m_displaySpeedInTitle)
+            m_appMenuButton->setText(tr("   qBittorrent   ↓ %1   ↑ %2").arg(m_downloadRate, m_uploadRate));
+        else
+            m_appMenuButton->setText(u"   qBittorrent"_s);
+    }
+#endif
 }
 
 void MainWindow::refreshTrayIconTooltip()
