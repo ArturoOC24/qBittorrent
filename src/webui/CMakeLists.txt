@@ -8,15 +8,12 @@ add_library(qbt_webui STATIC
     api/clientdatacontroller.h
     api/isessionmanager.h
     api/logcontroller.h
-    api/rsscontroller.h
-    api/searchcontroller.h
     api/synccontroller.h
     api/torrentcreatorcontroller.h
     api/torrentscontroller.h
     api/transfercontroller.h
     api/serialize/serialize_torrent.h
     clientdatastorage.h
-    searchjobmanager.h
     webapplication.h
     websession.h
     webui.h
@@ -28,19 +25,32 @@ add_library(qbt_webui STATIC
     api/authcontroller.cpp
     api/clientdatacontroller.cpp
     api/logcontroller.cpp
-    api/rsscontroller.cpp
-    api/searchcontroller.cpp
     api/synccontroller.cpp
     api/torrentcreatorcontroller.cpp
     api/torrentscontroller.cpp
     api/transfercontroller.cpp
     api/serialize/serialize_torrent.cpp
     clientdatastorage.cpp
-    searchjobmanager.cpp
     webapplication.cpp
     websession.cpp
     webui.cpp
 )
+
+if (RSS)
+    target_sources(qbt_webui PRIVATE
+        api/rsscontroller.h
+        api/rsscontroller.cpp
+    )
+endif()
+
+if (SEARCH)
+    target_sources(qbt_webui PRIVATE
+        api/searchcontroller.h
+        api/searchcontroller.cpp
+        searchjobmanager.h
+        searchjobmanager.cpp
+    )
+endif()
 
 target_sources(qbt_webui INTERFACE www/webui.qrc)
 

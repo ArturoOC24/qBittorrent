@@ -63,14 +63,20 @@
 #include "api/authcontroller.h"
 #include "api/clientdatacontroller.h"
 #include "api/logcontroller.h"
+#ifdef ENABLE_RSS
 #include "api/rsscontroller.h"
+#endif
+#ifdef ENABLE_SEARCH
 #include "api/searchcontroller.h"
+#endif
 #include "api/synccontroller.h"
 #include "api/torrentcreatorcontroller.h"
 #include "api/torrentscontroller.h"
 #include "api/transfercontroller.h"
 #include "clientdatastorage.h"
+#ifdef ENABLE_SEARCH
 #include "searchjobmanager.h"
+#endif
 #include "websession.h"
 
 const int MAX_ALLOWED_FILESIZE = 10 * 1024 * 1024;
@@ -175,7 +181,9 @@ WebApplication::WebApplication(IApplication *app, QObject *parent)
     , m_trRegex {u"QBT_TR\\((([^\\)]|\\)(?!QBT_TR))+)\\)QBT_TR\\[CONTEXT=([a-zA-Z_][a-zA-Z0-9_]*)\\]"_s}
     , m_authController {new AuthController(this, app, this)}
     , m_torrentCreationManager {new BitTorrent::TorrentCreationManager(app, this)}
+#ifdef ENABLE_SEARCH
     , m_searchJobManager {new SearchJobManager(this)}
+#endif
     , m_clientDataStorage {new ClientDataStorage(this)}
 {
     declarePublicAPI(u"auth/login"_s);
@@ -912,7 +920,9 @@ void WebApplication::sessionStartImpl(const QString &sessionId, const WebSession
 
     m_currentSession->registerAPIController(u"app"_s, [app = app(), parent = m_currentSession] { return new AppController(app, parent); });
     m_currentSession->registerAPIController(u"log"_s, [app = app(), parent = m_currentSession] { return new LogController(app, parent); });
+#ifdef ENABLE_RSS
     m_currentSession->registerAPIController(u"rss"_s, [app = app(), parent = m_currentSession] { return new RSSController(app, parent); });
+#endif
     m_currentSession->registerAPIController(u"torrents"_s, [app = app(), parent = m_currentSession] { return new TorrentsController(app, parent); });
     m_currentSession->registerAPIController(u"transfer"_s, [app = app(), parent = m_currentSession] { return new TransferController(app, parent); });
     m_currentSession->registerAPIController(u"clientdata"_s
@@ -925,11 +935,13 @@ void WebApplication::sessionStartImpl(const QString &sessionId, const WebSession
     {
         return new TorrentCreatorController(torrentCreationManager, app, parent);
     });
+#ifdef ENABLE_SEARCH
     m_currentSession->registerAPIController(u"search"_s
             , [app = app(), parent = m_currentSession, searchJobManager = m_searchJobManager]
     {
         return new SearchController(searchJobManager, app, parent);
     });
+#endif
     m_currentSession->registerAPIController(u"sync"_s
             , [app = app(), parent = m_currentSession, btSession = BitTorrent::Session::instance()]
     {

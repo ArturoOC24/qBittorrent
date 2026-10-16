@@ -59,8 +59,10 @@
 #include "base/path.h"
 #include "base/preferences.h"
 #include "base/profile.h"
+#ifdef ENABLE_RSS
 #include "base/rss/rss_autodownloader.h"
 #include "base/rss/rss_session.h"
+#endif
 #include "base/torrentfileguard.h"
 #include "base/torrentfileswatcher.h"
 #include "base/utils/apikey.h"
@@ -75,7 +77,9 @@
 #include "banlistoptionsdialog.h"
 #include "interfaces/iguiapplication.h"
 #include "ipsubnetwhitelistoptionsdialog.h"
+#ifdef ENABLE_RSS
 #include "rss/automatedrssdownloader.h"
+#endif
 #include "ui_optionsdialog.h"
 #include "uithemedialog.h"
 #include "uithememanager.h"
@@ -1351,6 +1355,7 @@ void OptionsDialog::saveBittorrentTabOptions() const
 
 void OptionsDialog::loadRSSTabOptions()
 {
+#ifdef ENABLE_RSS
     const auto *rssSession = RSS::Session::instance();
     const auto *autoDownloader = RSS::AutoDownloader::instance();
 
@@ -1375,10 +1380,12 @@ void OptionsDialog::loadRSSTabOptions()
     connect(m_ui->spinRSSRefreshInterval, qSpinBoxValueChanged, this, &OptionsDialog::enableApplyButton);
     connect(m_ui->spinRSSFetchDelay, qSpinBoxValueChanged, this, &OptionsDialog::enableApplyButton);
     connect(m_ui->spinRSSMaxArticlesPerFeed, qSpinBoxValueChanged, this, &OptionsDialog::enableApplyButton);
+#endif
 }
 
 void OptionsDialog::saveRSSTabOptions() const
 {
+#ifdef ENABLE_RSS
     auto *rssSession = RSS::Session::instance();
     auto *autoDownloader = RSS::AutoDownloader::instance();
 
@@ -1389,6 +1396,7 @@ void OptionsDialog::saveRSSTabOptions() const
     autoDownloader->setProcessingEnabled(m_ui->checkRSSAutoDownloaderEnable->isChecked());
     autoDownloader->setSmartEpisodeFilters(m_ui->textSmartEpisodeFilters->toPlainText().split(u'\n', Qt::SkipEmptyParts));
     autoDownloader->setDownloadRepacks(m_ui->checkSmartFilterDownloadRepacks->isChecked());
+#endif
 }
 
 void OptionsDialog::loadSearchTabOptions()

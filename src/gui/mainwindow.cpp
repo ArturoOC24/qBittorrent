@@ -79,8 +79,10 @@
 #include "base/path.h"
 #include "base/plugins/pluginsengine.h"
 #include "base/preferences.h"
+#ifdef ENABLE_RSS
 #include "base/rss/rss_folder.h"
 #include "base/rss/rss_session.h"
+#endif
 #include "base/tag.h"
 #include "base/torrentfilter.h"
 #include "base/utils/foreignapps.h"
@@ -103,8 +105,12 @@
 #include "properties/peerlistwidget.h"
 #include "properties/propertieswidget.h"
 #include "properties/proptabbar.h"
+#ifdef ENABLE_RSS
 #include "rss/rsswidget.h"
+#endif
+#ifdef ENABLE_SEARCH
 #include "search/searchwidget.h"
+#endif
 #include "speedgraphwidget.h"
 #include "speedlimitdialog.h"
 #include "statsdialog.h"
@@ -506,8 +512,16 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     m_ui->actionTopToolBar->setChecked(pref->isToolbarDisplayed());
     m_ui->actionShowStatusbar->setChecked(pref->isStatusbarDisplayed());
     m_ui->actionSpeedInTitleBar->setChecked(pref->speedInTitleBar());
+#ifdef ENABLE_RSS
     m_ui->actionRSSReader->setChecked(pref->isRSSWidgetEnabled());
+#else
+    m_ui->actionRSSReader->setVisible(false);
+#endif
+#ifdef ENABLE_SEARCH
     m_ui->actionSearchWidget->setChecked(pref->isSearchEnabled());
+#else
+    m_ui->actionSearchWidget->setVisible(false);
+#endif
     m_ui->actionExecutionLogs->setChecked(isExecutionLogEnabled());
 
     const Log::MsgTypes flags = executionLogMsgTypes();
@@ -516,14 +530,18 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     m_ui->actionWarningMessages->setChecked(flags.testFlag(Log::WARNING));
     m_ui->actionCriticalMessages->setChecked(flags.testFlag(Log::CRITICAL));
 
+#ifdef ENABLE_RSS
     displayRSSTab(m_ui->actionRSSReader->isChecked());
+#endif
     on_actionExecutionLogs_triggered(m_ui->actionExecutionLogs->isChecked());
     on_actionNormalMessages_triggered(m_ui->actionNormalMessages->isChecked());
     on_actionInformationMessages_triggered(m_ui->actionInformationMessages->isChecked());
     on_actionWarningMessages_triggered(m_ui->actionWarningMessages->isChecked());
     on_actionCriticalMessages_triggered(m_ui->actionCriticalMessages->isChecked());
+#ifdef ENABLE_SEARCH
     if (m_ui->actionSearchWidget->isChecked())
         QMetaObject::invokeMethod(this, &MainWindow::on_actionSearchWidget_triggered, Qt::QueuedConnection);
+#endif
     // Auto shutdown actions
     auto *autoShutdownGroup = new QActionGroup(this);
     autoShutdownGroup->setExclusive(true);
@@ -1312,13 +1330,16 @@ void MainWindow::on_actionLock_triggered()
     hide();
 }
 
-void MainWindow::handleRSSUnreadCountUpdated(int count)
+void MainWindow::handleRSSUnreadCountUpdated([[maybe_unused]] int count)
 {
+#ifdef ENABLE_RSS
     m_tabs->setTabText(m_tabs->indexOf(m_rssWidget), tr("RSS (%1)").arg(count));
+#endif
 }
 
-void MainWindow::displayRSSTab(bool enable)
+void MainWindow::displayRSSTab([[maybe_unused]] bool enable)
 {
+#ifdef ENABLE_RSS
     if (enable)
     {
         // RSS tab
@@ -1343,6 +1364,7 @@ void MainWindow::displayRSSTab(bool enable)
     {
         delete m_rssWidget;
     }
+#endif
 }
 
 void MainWindow::showFilterContextMenu()
@@ -1362,12 +1384,13 @@ void MainWindow::showFilterContextMenu()
     menu->popup(QCursor::pos());
 }
 
-void MainWindow::displaySearchTab(bool enable)
+void MainWindow::displaySearchTab([[maybe_unused]] bool enable)
 {
+#ifdef ENABLE_SEARCH
     Preferences::instance()->setSearchEnabled(enable);
     if (enable)
     {
-        // RSS tab
+        // Search tab
         if (!m_searchWidget)
         {
             m_searchWidget = new SearchWidget(app(), this);
@@ -1392,6 +1415,7 @@ void MainWindow::displaySearchTab(bool enable)
     {
         delete m_searchWidget;
     }
+#endif
 }
 
 void MainWindow::toggleFocusBetweenLineEdits()
@@ -1432,11 +1456,13 @@ void MainWindow::tabChanged([[maybe_unused]] const int newTab)
     }
     m_columnFilterWidget->setVisible(false);
 
+#ifdef ENABLE_SEARCH
     if (m_tabs->currentWidget() == m_searchWidget)
     {
         qDebug("Changed tab to search engine, giving focus to search input");
         m_searchWidget->giveFocusToSearchInput();
     }
+#endif
 }
 
 void MainWindow::saveSettings() const
@@ -1463,9 +1489,11 @@ void MainWindow::cleanup()
         saveSplitterSettings();
     }
 
+#ifdef ENABLE_RSS
     // delete RSSWidget explicitly to avoid crash in
     // handleRSSUnreadCountUpdated() at application shutdown
     delete m_rssWidget;
+#endif
 
     delete m_executableWatcher;
 
@@ -1564,6 +1592,7 @@ void MainWindow::displayTransferTab() const
 
 void MainWindow::displaySearchTab()
 {
+#ifdef ENABLE_SEARCH
     if (!m_searchWidget)
     {
         m_ui->actionSearchWidget->setChecked(true);
@@ -1571,10 +1600,12 @@ void MainWindow::displaySearchTab()
     }
 
     m_tabs->setCurrentWidget(m_searchWidget);
+#endif
 }
 
 void MainWindow::displayRSSTab()
 {
+#ifdef ENABLE_RSS
     if (!m_rssWidget)
     {
         m_ui->actionRSSReader->setChecked(true);
@@ -1582,6 +1613,7 @@ void MainWindow::displayRSSTab()
     }
 
     m_tabs->setCurrentWidget(m_rssWidget);
+#endif
 }
 
 void MainWindow::displayExecutionLogTab()

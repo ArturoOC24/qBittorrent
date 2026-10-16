@@ -56,8 +56,10 @@
 #include "base/net/smtpencryptiontype.h"
 #include "base/path.h"
 #include "base/preferences.h"
+#ifdef ENABLE_RSS
 #include "base/rss/rss_autodownloader.h"
 #include "base/rss/rss_session.h"
+#endif
 #include "base/torrentfileguard.h"
 #include "base/torrentfileswatcher.h"
 #include "base/utils/apikey.h"
@@ -386,6 +388,7 @@ void AppController::preferencesAction()
     data[u"dyndns_domain"_s] = pref->getDynDomainName();
 
     // RSS settings
+#ifdef ENABLE_RSS
     data[u"rss_refresh_interval"_s] = RSS::Session::instance()->refreshInterval();
     data[u"rss_fetch_delay"_s] = static_cast<qlonglong>(RSS::Session::instance()->fetchDelay().count());
     data[u"rss_max_articles_per_feed"_s] = RSS::Session::instance()->maxArticlesPerFeed();
@@ -393,6 +396,7 @@ void AppController::preferencesAction()
     data[u"rss_auto_downloading_enabled"_s] = RSS::AutoDownloader::instance()->isProcessingEnabled();
     data[u"rss_download_repack_proper_episodes"_s] = RSS::AutoDownloader::instance()->downloadRepacks();
     data[u"rss_smart_episode_filters"_s] = RSS::AutoDownloader::instance()->smartEpisodeFilters().join(u'\n');
+#endif
 
     // Advanced settings
     // qBitorrent preferences
@@ -1016,6 +1020,7 @@ void AppController::setPreferencesAction()
     if (hasKey(u"dyndns_domain"_s))
         pref->setDynDomainName(it.value().toString());
 
+#ifdef ENABLE_RSS
     if (hasKey(u"rss_refresh_interval"_s))
         RSS::Session::instance()->setRefreshInterval(it.value().toInt());
     if (hasKey(u"rss_fetch_delay"_s))
@@ -1030,6 +1035,7 @@ void AppController::setPreferencesAction()
         RSS::AutoDownloader::instance()->setDownloadRepacks(it.value().toBool());
     if (hasKey(u"rss_smart_episode_filters"_s))
         RSS::AutoDownloader::instance()->setSmartEpisodeFilters(it.value().toString().split(u'\n'));
+#endif
 
     // Advanced settings
     // qBittorrent preferences

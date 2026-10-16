@@ -93,18 +93,6 @@ add_library(qbt_base STATIC
     preferences.h
     profile.h
     profile_p.h
-    rss/feed_serializer.h
-    rss/rss_article.h
-    rss/rss_autodownloader.h
-    rss/rss_autodownloadrule.h
-    rss/rss_feed.h
-    rss/rss_folder.h
-    rss/rss_item.h
-    rss/rss_parser.h
-    rss/rss_session.h
-    search/searchdownloadhandler.h
-    search/searchhandler.h
-    search/searchpluginmanager.h
     settingsstorage.h
     tag.h
     tagset.h
@@ -197,18 +185,6 @@ add_library(qbt_base STATIC
     preferences.cpp
     profile.cpp
     profile_p.cpp
-    rss/feed_serializer.cpp
-    rss/rss_article.cpp
-    rss/rss_autodownloader.cpp
-    rss/rss_autodownloadrule.cpp
-    rss/rss_feed.cpp
-    rss/rss_folder.cpp
-    rss/rss_item.cpp
-    rss/rss_parser.cpp
-    rss/rss_session.cpp
-    search/searchdownloadhandler.cpp
-    search/searchhandler.cpp
-    search/searchpluginmanager.cpp
     settingsstorage.cpp
     tag.cpp
     tagset.cpp
@@ -283,6 +259,42 @@ endif()
 
 if (NOT WEBUI)
     target_compile_definitions(qbt_base PUBLIC DISABLE_WEBUI)
+endif()
+
+if (RSS)
+    target_compile_definitions(qbt_base PUBLIC ENABLE_RSS)
+    target_sources(qbt_base PRIVATE
+        rss/feed_serializer.h
+        rss/rss_article.h
+        rss/rss_autodownloader.h
+        rss/rss_autodownloadrule.h
+        rss/rss_feed.h
+        rss/rss_folder.h
+        rss/rss_item.h
+        rss/rss_parser.h
+        rss/rss_session.h
+        rss/feed_serializer.cpp
+        rss/rss_article.cpp
+        rss/rss_autodownloader.cpp
+        rss/rss_autodownloadrule.cpp
+        rss/rss_feed.cpp
+        rss/rss_folder.cpp
+        rss/rss_item.cpp
+        rss/rss_parser.cpp
+        rss/rss_session.cpp
+    )
+endif()
+
+if (SEARCH)
+    target_compile_definitions(qbt_base PUBLIC ENABLE_SEARCH)
+    target_sources(qbt_base PRIVATE
+        search/searchdownloadhandler.h
+        search/searchhandler.h
+        search/searchpluginmanager.h
+        search/searchdownloadhandler.cpp
+        search/searchhandler.cpp
+        search/searchpluginmanager.cpp
+    )
 endif()
 
 if (DBUS)

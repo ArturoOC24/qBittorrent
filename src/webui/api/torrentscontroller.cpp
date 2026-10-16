@@ -59,8 +59,10 @@
 #include "base/logger.h"
 #include "base/net/downloadmanager.h"
 #include "base/preferences.h"
+#ifdef ENABLE_SEARCH
 #include "base/search/searchdownloadhandler.h"
 #include "base/search/searchpluginmanager.h"
+#endif
 #include "base/torrentfilter.h"
 #include "base/utils/datetime.h"
 #include "base/utils/dict.h"
@@ -1193,8 +1195,13 @@ void TorrentsController::addAction()
     }
 
     const QString downloaderParam = params()[u"downloader"_s];
+#ifdef ENABLE_SEARCH
     if (!downloaderParam.isEmpty() && !SearchPluginManager::instance()->allPlugins().contains(downloaderParam))
         throw APIError(APIErrorType::BadParams, tr("`downloader` must be a valid search plugin"));
+#else
+    if (!downloaderParam.isEmpty())
+        throw APIError(APIErrorType::BadParams, tr("Search engine support is disabled in this build"));
+#endif
 
     BitTorrent::AddTorrentParams addTorrentParams
     {
@@ -1276,6 +1283,7 @@ void TorrentsController::addAction()
             if (!filePriorities.isEmpty())
                 throw APIError(APIErrorType::BadParams, tr("`filePriorities` may only be specified when metadata has already been fetched"));
 
+#ifdef ENABLE_SEARCH
             SearchDownloadHandler *downloadHandler = SearchPluginManager::instance()->downloadTorrent(downloaderParam, url);
             connect(downloadHandler, &SearchDownloadHandler::downloadFinished
                     , this, [this, addTorrentParams](const QString &torrentFilePath)
@@ -1285,6 +1293,7 @@ void TorrentsController::addAction()
             connect(downloadHandler, &SearchDownloadHandler::downloadFinished, downloadHandler, &SearchDownloadHandler::deleteLater);
 
             ++pending;
+#endif
         }
         else
         {
@@ -2277,8 +2286,13 @@ void TorrentsController::fetchMetadataAction()
         throw APIError(APIErrorType::BadParams, tr("Must specify URI or hash"));
 
     const QString downloaderParam = params()[u"downloader"_s];
+#ifdef ENABLE_SEARCH
     if (!downloaderParam.isEmpty() && !SearchPluginManager::instance()->allPlugins().contains(downloaderParam))
         throw APIError(APIErrorType::BadParams, tr("downloader must be a valid search plugin"));
+#else
+    if (!downloaderParam.isEmpty())
+        throw APIError(APIErrorType::BadParams, tr("Search engine support is disabled in this build"));
+#endif
 
     const QString source = QUrl::fromPercentEncoding(sourceParam.toLatin1());
     const auto sourceTorrentDescr = BitTorrent::TorrentDescriptor::parse(source);
@@ -2329,6 +2343,7 @@ void TorrentsController::fetchMetadataAction()
         {
             if (!downloaderParam.isEmpty())
             {
+#ifdef ENABLE_SEARCH
                 SearchDownloadHandler *downloadHandler = SearchPluginManager::instance()->downloadTorrent(downloaderParam, source);
                 connect(downloadHandler, &SearchDownloadHandler::downloadFinished
                         , this, [this, source](const QString &data)
@@ -2336,6 +2351,7 @@ void TorrentsController::fetchMetadataAction()
                     onSearchPluginTorrentDownloaded(source, data);
                 });
                 connect(downloadHandler, &SearchDownloadHandler::downloadFinished, downloadHandler, &SearchDownloadHandler::deleteLater);
+#endif
             }
             else
             {

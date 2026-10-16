@@ -81,9 +81,13 @@
 #include "base/net/smtpclient.h"
 #include "base/preferences.h"
 #include "base/profile.h"
+#ifdef ENABLE_RSS
 #include "base/rss/rss_autodownloader.h"
 #include "base/rss/rss_session.h"
+#endif
+#ifdef ENABLE_SEARCH
 #include "base/search/searchpluginmanager.h"
+#endif
 #include "base/settingsstorage.h"
 #include "base/torrentfileswatcher.h"
 #include "base/utils/fs.h"
@@ -989,8 +993,10 @@ int Application::exec()
         Net::ReverseResolution::initInstance();
         TorrentFilesWatcher::initInstance();
 
+#ifdef ENABLE_RSS
         new RSS::Session; // create RSS::Session singleton
         new RSS::AutoDownloader(this); // create RSS::AutoDownloader singleton
+#endif
 
 #ifndef DISABLE_GUI
         const auto *btSession = BitTorrent::Session::instance();
@@ -1507,8 +1513,10 @@ void Application::cleanup()
     PluginsEngine::freeInstance();
 #endif
 
+#ifdef ENABLE_RSS
     delete RSS::AutoDownloader::instance();
     delete RSS::Session::instance();
+#endif
 
     TorrentFilesWatcher::freeInstance();
 #ifdef DISABLE_GUI
@@ -1521,7 +1529,9 @@ void Application::cleanup()
     Net::ProxyConfigurationManager::freeInstance();
     Preferences::freeInstance();
     SettingsStorage::freeInstance();
+#ifdef ENABLE_SEARCH
     SearchPluginManager::freeInstance();
+#endif
     Utils::Fs::removeDirRecursively(Utils::Fs::tempPath());
 
     LogMsg(tr("qBittorrent is now ready to exit"));
