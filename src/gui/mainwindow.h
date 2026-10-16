@@ -169,6 +169,10 @@ private slots:
     void on_actionShowCategoriesFilter_triggered(bool checked);
     void on_actionShowTagsFilter_triggered(bool checked);
     void on_actionShowTrackersFilter_triggered(bool checked);
+    void on_actionFilterCombos_triggered(bool checked);
+    void onStatusFilterChanged(int index);
+    void onCategoryFilterChanged(int index);
+    void onTagFilterChanged(int index);
     void on_actionTopToolBar_triggered();
     void on_actionShowStatusbar_triggered();
     void on_actionShowFiltersSidebar_triggered(bool checked);
@@ -226,6 +230,9 @@ private:
     void showStatusBar(bool show);
     void showFiltersSidebar(bool show);
     void applyFilterSectionVisibility();
+    void refreshCategoryComboBox();
+    void refreshTagComboBox();
+    void setFilterCombosMode(bool enabled);
     void applyTransferListFilter();
     void refreshWindowTitle();
     void refreshTrayIconTooltip();
@@ -282,6 +289,9 @@ private:
     QSplitter *m_splitter = nullptr;
     QWidget *m_transfersTab = nullptr;
     QWidget *m_filterBar = nullptr;
+    QComboBox *m_statusFilterComboBox = nullptr;
+    QComboBox *m_categoryFilterComboBox = nullptr;
+    QComboBox *m_tagFilterComboBox = nullptr;
     QPointer<SearchWidget> m_searchWidget;
     QPointer<RSSWidget> m_rssWidget;
     QPointer<ExecutionLogWidget> m_executionLog;
@@ -300,6 +310,7 @@ private:
     SettingValue<bool> m_storeCategoriesSectionVisible;
     SettingValue<bool> m_storeTagsSectionVisible;
     SettingValue<bool> m_storeTrackersSectionVisible;
+    SettingValue<bool> m_storeFilterCombosMode;
 
     SpeedGraphWidget *m_speedGraph = nullptr;
     CachedSettingValue<Log::MsgTypes> m_storeExecutionLogTypes;

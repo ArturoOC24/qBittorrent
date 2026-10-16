@@ -81,6 +81,8 @@
 #include "base/preferences.h"
 #include "base/rss/rss_folder.h"
 #include "base/rss/rss_session.h"
+#include "base/tag.h"
+#include "base/torrentfilter.h"
 #include "base/utils/foreignapps.h"
 #include "base/utils/fs.h"
 #include "base/utils/misc.h"
@@ -167,6 +169,7 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     , m_storeCategoriesSectionVisible {SETTINGS_KEY(u"FilterSectionCategoriesVisible"_s)}
     , m_storeTagsSectionVisible {SETTINGS_KEY(u"FilterSectionTagsVisible"_s)}
     , m_storeTrackersSectionVisible {SETTINGS_KEY(u"FilterSectionTrackersVisible"_s)}
+    , m_storeFilterCombosMode {SETTINGS_KEY(u"FilterCombosMode"_s)}
     , m_storeExecutionLogTypes {EXECUTIONLOG_SETTINGS_KEY(u"Types"_s), Log::MsgType::ALL}
 #ifdef Q_OS_MACOS
     , m_badger {std::make_unique<MacUtils::Badger>()}
@@ -292,6 +295,44 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     m_transferListWidget->installEventFilter(this);
     positionSpeedGraph();
 
+    // Optional top-bar filter comboboxes (alternative to the left sidebar).
+    m_statusFilterComboBox = new QComboBox(this);
+    for (const auto &[label, value] : std::initializer_list<std::pair<const char *, int>> {
+            {QT_TR_NOOP("All Statuses"), TorrentFilter::All},
+            {QT_TR_NOOP("Downloading"), TorrentFilter::Downloading},
+            {QT_TR_NOOP("Seeding"), TorrentFilter::Seeding},
+            {QT_TR_NOOP("Completed"), TorrentFilter::Completed},
+            {QT_TR_NOOP("Running"), TorrentFilter::Running},
+            {QT_TR_NOOP("Stopped"), TorrentFilter::Stopped},
+            {QT_TR_NOOP("Active"), TorrentFilter::Active},
+            {QT_TR_NOOP("Inactive"), TorrentFilter::Inactive},
+            {QT_TR_NOOP("Stalled"), TorrentFilter::Stalled},
+            {QT_TR_NOOP("Stalled Uploading"), TorrentFilter::StalledUploading},
+            {QT_TR_NOOP("Stalled Downloading"), TorrentFilter::StalledDownloading},
+            {QT_TR_NOOP("Checking"), TorrentFilter::Checking},
+            {QT_TR_NOOP("Moving"), TorrentFilter::Moving},
+            {QT_TR_NOOP("Errored"), TorrentFilter::Errored}})
+    {
+        m_statusFilterComboBox->addItem(tr(label), value);
+    }
+    connect(m_statusFilterComboBox, &QComboBox::currentIndexChanged, this, &MainWindow::onStatusFilterChanged);
+
+    m_categoryFilterComboBox = new QComboBox(this);
+    connect(m_categoryFilterComboBox, &QComboBox::currentIndexChanged, this, &MainWindow::onCategoryFilterChanged);
+
+    m_tagFilterComboBox = new QComboBox(this);
+    connect(m_tagFilterComboBox, &QComboBox::currentIndexChanged, this, &MainWindow::onTagFilterChanged);
+
+    refreshCategoryComboBox();
+    refreshTagComboBox();
+    {
+        const auto *btSession = BitTorrent::Session::instance();
+        connect(btSession, &BitTorrent::Session::categoryAdded, this, &MainWindow::refreshCategoryComboBox);
+        connect(btSession, &BitTorrent::Session::categoryRemoved, this, &MainWindow::refreshCategoryComboBox);
+        connect(btSession, &BitTorrent::Session::tagAdded, this, &MainWindow::refreshTagComboBox);
+        connect(btSession, &BitTorrent::Session::tagRemoved, this, &MainWindow::refreshTagComboBox);
+    }
+
     m_propertiesWidget = new PropertiesWidget(hSplitter);
     m_propertiesWidget->setObjectName(u"propertiesPanel"_s);
     connect(m_transferListWidget, &TransferListWidget::currentTorrentChanged, m_propertiesWidget, &PropertiesWidget::loadTorrentInfos);
@@ -329,6 +370,12 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     auto *filterBarLayout = new QHBoxLayout(filterBar);
     filterBarLayout->setContentsMargins(6, 4, 6, 4);
     filterBarLayout->setSpacing(6);
+    // Filter comboboxes on the left (shown only in "filter combos" mode), the
+    // column filter (search box) on the right (its own spacer right-aligns it).
+    filterBarLayout->addWidget(m_statusFilterComboBox);
+    filterBarLayout->addWidget(m_categoryFilterComboBox);
+    filterBarLayout->addWidget(m_tagFilterComboBox);
+    m_columnFilterWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     filterBarLayout->addWidget(m_columnFilterWidget);
 
     m_transfersTab = new QWidget(this);
@@ -625,6 +672,10 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     m_ui->actionShowCategoriesFilter->setChecked(m_storeCategoriesSectionVisible.get(true));
     m_ui->actionShowTagsFilter->setChecked(m_storeTagsSectionVisible.get(true));
     m_ui->actionShowTrackersFilter->setChecked(m_storeTrackersSectionVisible.get(true));
+
+    const bool filterCombosMode = m_storeFilterCombosMode.get(false);
+    m_ui->actionFilterCombos->setChecked(filterCombosMode);
+    setFilterCombosMode(filterCombosMode);
 
     // Details panel: reflect the properties panel's current state and keep the
     // menu item in sync with the toggle pill on the splitter handle.
@@ -2113,6 +2164,15 @@ void MainWindow::on_actionShowFiltersSidebar_triggered(const bool checked)
     Preferences *const pref = Preferences::instance();
     pref->setFiltersSidebarVisible(checked);
     showFiltersSidebar(checked);
+
+    // Sidebar and the filter comboboxes are two views of the same filters:
+    // enabling the sidebar turns the combos mode off.
+    if (checked && m_ui->actionFilterCombos->isChecked())
+    {
+        m_ui->actionFilterCombos->setChecked(false);
+        m_storeFilterCombosMode = false;
+        setFilterCombosMode(false);
+    }
 }
 
 void MainWindow::on_actionSpeedInTitleBar_triggered()
@@ -2200,6 +2260,99 @@ void MainWindow::on_actionShowTrackersFilter_triggered(const bool checked)
     m_storeTrackersSectionVisible = checked;
     if (m_transferListFiltersWidget)
         m_transferListFiltersWidget->setSectionVisible(TransferListFiltersWidget::Section::Trackers, checked);
+}
+
+void MainWindow::onStatusFilterChanged(const int index)
+{
+    if (!m_statusFilterComboBox)
+        return;
+    m_transferListWidget->applyStatusFilter(m_statusFilterComboBox->itemData(index).toInt());
+}
+
+void MainWindow::onCategoryFilterChanged([[maybe_unused]] const int index)
+{
+    const QVariant data = m_categoryFilterComboBox->currentData();
+    m_transferListWidget->applyCategoryFilter(data.isValid() ? data.toString() : QString());
+}
+
+void MainWindow::onTagFilterChanged([[maybe_unused]] const int index)
+{
+    const QVariant data = m_tagFilterComboBox->currentData();
+    m_transferListWidget->applyTagFilter(data.isValid() ? std::optional<Tag> {Tag(data.toString())} : std::nullopt);
+}
+
+void MainWindow::refreshCategoryComboBox()
+{
+    if (!m_categoryFilterComboBox)
+        return;
+
+    const QVariant current = m_categoryFilterComboBox->currentData();
+    m_categoryFilterComboBox->blockSignals(true);
+    m_categoryFilterComboBox->clear();
+    m_categoryFilterComboBox->addItem(tr("All Categories"), QVariant());   // invalid → disable filter
+    m_categoryFilterComboBox->addItem(tr("Uncategorized"), QString(u""_s)); // empty non-null → uncategorized
+
+    for (const QString &cat : asConst(BitTorrent::Session::instance()->categories()))
+        m_categoryFilterComboBox->addItem(cat, cat);
+
+    const int idx = current.isValid() ? m_categoryFilterComboBox->findData(current) : -1;
+    m_categoryFilterComboBox->setCurrentIndex(idx >= 0 ? idx : 0);
+    m_categoryFilterComboBox->blockSignals(false);
+}
+
+void MainWindow::refreshTagComboBox()
+{
+    if (!m_tagFilterComboBox)
+        return;
+
+    const QVariant current = m_tagFilterComboBox->currentData();
+    m_tagFilterComboBox->blockSignals(true);
+    m_tagFilterComboBox->clear();
+    m_tagFilterComboBox->addItem(tr("All Tags"), QVariant());
+
+    for (const Tag &tag : asConst(BitTorrent::Session::instance()->tags()))
+        m_tagFilterComboBox->addItem(tag.toString(), tag.toString());
+
+    const int idx = current.isValid() ? m_tagFilterComboBox->findData(current) : -1;
+    m_tagFilterComboBox->setCurrentIndex(idx >= 0 ? idx : 0);
+    m_tagFilterComboBox->blockSignals(false);
+}
+
+void MainWindow::setFilterCombosMode(const bool enabled)
+{
+    if (m_statusFilterComboBox)
+        m_statusFilterComboBox->setVisible(enabled);
+    if (m_categoryFilterComboBox)
+        m_categoryFilterComboBox->setVisible(enabled);
+    if (m_tagFilterComboBox)
+        m_tagFilterComboBox->setVisible(enabled);
+
+    if (enabled)
+    {
+        // Combos replace the left sidebar: hide it, then apply the selections.
+        if (m_ui->actionShowFiltersSidebar->isChecked())
+        {
+            m_ui->actionShowFiltersSidebar->setChecked(false);
+            Preferences::instance()->setFiltersSidebarVisible(false);
+            showFiltersSidebar(false);
+        }
+        onStatusFilterChanged(m_statusFilterComboBox->currentIndex());
+        onCategoryFilterChanged(m_categoryFilterComboBox->currentIndex());
+        onTagFilterChanged(m_tagFilterComboBox->currentIndex());
+    }
+}
+
+void MainWindow::on_actionFilterCombos_triggered(const bool checked)
+{
+    m_storeFilterCombosMode = checked;
+    setFilterCombosMode(checked);
+    if (!checked)
+    {
+        // Clear any filtering the combos applied so the state is clean again.
+        m_transferListWidget->applyStatusFilter(TorrentFilter::All);
+        m_transferListWidget->applyCategoryFilter(QString());
+        m_transferListWidget->applyTagFilter(std::nullopt);
+    }
 }
 
 void MainWindow::positionSpeedGraph()

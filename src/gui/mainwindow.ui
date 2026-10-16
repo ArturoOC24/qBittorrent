@@ -122,6 +122,8 @@
     <addaction name="actionShowDetailsPanel"/>
     <addaction name="actionShowTabBar"/>
     <addaction name="separator"/>
+    <addaction name="actionFilterCombos"/>
+    <addaction name="separator"/>
     <addaction name="actionShowStatusFilter"/>
     <addaction name="actionShowCategoriesFilter"/>
     <addaction name="actionShowTagsFilter"/>
@@ -403,6 +405,17 @@
    </property>
    <property name="toolTip">
     <string>Show the tab bar (Transfers / Search / RSS)</string>
+   </property>
+  </action>
+  <action name="actionFilterCombos">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Filters as Com&amp;boboxes</string>
+   </property>
+   <property name="toolTip">
+    <string>Show Status/Categories/Tags as comboboxes in the top filter bar instead of the left sidebar</string>
    </property>
   </action>
   <action name="actionShowStatusFilter">
