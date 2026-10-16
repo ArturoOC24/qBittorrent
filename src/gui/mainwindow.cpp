@@ -170,6 +170,7 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     , m_storeTagsSectionVisible {SETTINGS_KEY(u"FilterSectionTagsVisible"_s)}
     , m_storeTrackersSectionVisible {SETTINGS_KEY(u"FilterSectionTrackersVisible"_s)}
     , m_storeFilterCombosMode {SETTINGS_KEY(u"FilterCombosMode"_s)}
+    , m_storeHiddenToolbarActions {SETTINGS_KEY(u"HiddenToolbarActions"_s)}
     , m_storeExecutionLogTypes {EXECUTIONLOG_SETTINGS_KEY(u"Types"_s), Log::MsgType::ALL}
 #ifdef Q_OS_MACOS
     , m_badger {std::make_unique<MacUtils::Badger>()}
@@ -677,6 +678,8 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     m_ui->actionFilterCombos->setChecked(filterCombosMode);
     setFilterCombosMode(filterCombosMode);
 
+    applyToolbarActionVisibility();
+
     // Details panel: reflect the properties panel's current state and keep the
     // menu item in sync with the toggle pill on the splitter handle.
     m_ui->actionShowDetailsPanel->setChecked(!m_propertiesWidget->isPanelReduced());
@@ -1175,6 +1178,9 @@ void MainWindow::addToolbarContextMenu()
     default:
         followSystemStyle->setChecked(true);
     }
+
+    m_toolbarMenu->addSeparator();
+    m_toolbarButtonsMenu = m_toolbarMenu->addMenu(tr("Toolbar Buttons"));
 }
 
 void MainWindow::manageCookies()
@@ -1186,7 +1192,50 @@ void MainWindow::manageCookies()
 
 void MainWindow::toolbarMenuRequested()
 {
+    // Rebuild the per-button visibility toggles so they reflect the current
+    // toolbar actions and their visibility.
+    if (m_toolbarButtonsMenu)
+    {
+        m_toolbarButtonsMenu->clear();
+        for (QAction *action : asConst(m_ui->toolBar->actions()))
+        {
+            // Skip separators / separator-line widgets (they have no text).
+            if (action->isSeparator() || action->text().isEmpty() || action->objectName().isEmpty())
+                continue;
+
+            QAction *toggle = m_toolbarButtonsMenu->addAction(action->text());
+            toggle->setCheckable(true);
+            toggle->setChecked(action->isVisible());
+            if (!action->icon().isNull())
+                toggle->setIcon(action->icon());
+            connect(toggle, &QAction::toggled, this, [this, action](const bool visible)
+            {
+                action->setVisible(visible);
+
+                const QString name = action->objectName();
+                QStringList hidden = m_storeHiddenToolbarActions.get();
+                hidden.removeAll(name);
+                if (!visible)
+                    hidden.append(name);
+                m_storeHiddenToolbarActions = hidden;
+            });
+        }
+    }
+
     m_toolbarMenu->popup(QCursor::pos());
+}
+
+void MainWindow::applyToolbarActionVisibility()
+{
+    const QStringList hidden = m_storeHiddenToolbarActions.get();
+    if (hidden.isEmpty())
+        return;
+
+    for (QAction *action : asConst(m_ui->toolBar->actions()))
+    {
+        if (!action->objectName().isEmpty() && hidden.contains(action->objectName()))
+            action->setVisible(false);
+    }
 }
 
 void MainWindow::toolbarIconsOnly()

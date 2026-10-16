@@ -233,6 +233,7 @@ private:
     void refreshCategoryComboBox();
     void refreshTagComboBox();
     void setFilterCombosMode(bool enabled);
+    void applyToolbarActionVisibility();
     void applyTransferListFilter();
     void refreshWindowTitle();
     void refreshTrayIconTooltip();
@@ -299,6 +300,7 @@ private:
     PowerManagement *m_pwr = nullptr;
     QTimer *m_preventTimer = nullptr;
     QMenu *m_toolbarMenu = nullptr;
+    QMenu *m_toolbarButtonsMenu = nullptr;
 
     SettingValue<bool> m_storeExecutionLogEnabled;
     SettingValue<bool> m_storeDownloadTrackerFavicon;
@@ -311,6 +313,7 @@ private:
     SettingValue<bool> m_storeTagsSectionVisible;
     SettingValue<bool> m_storeTrackersSectionVisible;
     SettingValue<bool> m_storeFilterCombosMode;
+    SettingValue<QStringList> m_storeHiddenToolbarActions;
 
     SpeedGraphWidget *m_speedGraph = nullptr;
     CachedSettingValue<Log::MsgTypes> m_storeExecutionLogTypes;
