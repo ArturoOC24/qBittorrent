@@ -161,6 +161,12 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     , m_storeDownloadTrackerFavicon {SETTINGS_KEY(u"DownloadTrackerFavicon"_s)}
     , m_storeCompactRows {SETTINGS_KEY(u"CompactRows"_s)}
     , m_storeSpeedGraphVisible {SETTINGS_KEY(u"SpeedGraphVisible"_s)}
+    , m_storeFilterBarVisible {SETTINGS_KEY(u"FilterBarVisible"_s)}
+    , m_storeTabBarVisible {SETTINGS_KEY(u"TabBarVisible"_s)}
+    , m_storeStatusSectionVisible {SETTINGS_KEY(u"FilterSectionStatusVisible"_s)}
+    , m_storeCategoriesSectionVisible {SETTINGS_KEY(u"FilterSectionCategoriesVisible"_s)}
+    , m_storeTagsSectionVisible {SETTINGS_KEY(u"FilterSectionTagsVisible"_s)}
+    , m_storeTrackersSectionVisible {SETTINGS_KEY(u"FilterSectionTrackersVisible"_s)}
     , m_storeExecutionLogTypes {EXECUTIONLOG_SETTINGS_KEY(u"Types"_s), Log::MsgType::ALL}
 #ifdef Q_OS_MACOS
     , m_badger {std::make_unique<MacUtils::Badger>()}
@@ -317,6 +323,7 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     // box + "Filter by"). columnFilterSpacer (added first in columnFilterLayout)
     // pushes the controls to the right edge, above the list.
     auto *filterBar = new QWidget(this);
+    m_filterBar = filterBar;
     filterBar->setObjectName(u"filterBar"_s);
     filterBar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     auto *filterBarLayout = new QHBoxLayout(filterBar);
@@ -606,6 +613,26 @@ MainWindow::MainWindow(IGUIApplication *app, const WindowState initialState, con
     on_actionCompactRows_triggered(m_ui->actionCompactRows->isChecked());
 
     m_ui->actionShowSpeedGraph->setChecked(m_storeSpeedGraphVisible.get(true));
+
+    m_ui->actionShowFilterBar->setChecked(m_storeFilterBarVisible.get(true));
+    if (m_filterBar)
+        m_filterBar->setVisible(m_storeFilterBarVisible.get(true));
+
+    m_ui->actionShowTabBar->setChecked(m_storeTabBarVisible.get(true));
+    static_cast<HidableTabWidget *>(m_tabs.data())->setTabBarForcedHidden(!m_storeTabBarVisible.get(true));
+
+    m_ui->actionShowStatusFilter->setChecked(m_storeStatusSectionVisible.get(true));
+    m_ui->actionShowCategoriesFilter->setChecked(m_storeCategoriesSectionVisible.get(true));
+    m_ui->actionShowTagsFilter->setChecked(m_storeTagsSectionVisible.get(true));
+    m_ui->actionShowTrackersFilter->setChecked(m_storeTrackersSectionVisible.get(true));
+
+    // Details panel: reflect the properties panel's current state and keep the
+    // menu item in sync with the toggle pill on the splitter handle.
+    m_ui->actionShowDetailsPanel->setChecked(!m_propertiesWidget->isPanelReduced());
+    connect(m_propertiesWidget, &PropertiesWidget::panelVisibilityChanged, this, [this](const bool visible)
+    {
+        m_ui->actionShowDetailsPanel->setChecked(visible);
+    });
 
 #ifdef Q_OS_WIN
     installWindowAgent();
@@ -1856,6 +1883,7 @@ void MainWindow::showFiltersSidebar(const bool show)
     if (show && !m_transferListFiltersWidget)
     {
         m_transferListFiltersWidget = new TransferListFiltersWidget(m_splitter, m_transferListWidget, isDownloadTrackerFavicon());
+        applyFilterSectionVisibility();
         m_splitter->insertWidget(0, m_transferListFiltersWidget);
         m_splitter->setCollapsible(0, true);
         // From https://doc.qt.io/qt-5/qsplitter.html#setSizes:
@@ -2112,6 +2140,64 @@ void MainWindow::on_actionShowSpeedGraph_triggered(const bool checked)
         m_speedGraph->setVisible(checked);
         positionSpeedGraph();
     }
+}
+
+void MainWindow::on_actionShowFilterBar_triggered(const bool checked)
+{
+    m_storeFilterBarVisible = checked;
+    if (m_filterBar)
+        m_filterBar->setVisible(checked);
+}
+
+void MainWindow::on_actionShowDetailsPanel_triggered(const bool checked)
+{
+    m_propertiesWidget->setVisibility(checked);
+}
+
+void MainWindow::on_actionShowTabBar_triggered(const bool checked)
+{
+    m_storeTabBarVisible = checked;
+    static_cast<HidableTabWidget *>(m_tabs.data())->setTabBarForcedHidden(!checked);
+}
+
+void MainWindow::applyFilterSectionVisibility()
+{
+    if (!m_transferListFiltersWidget)
+        return;
+
+    using Section = TransferListFiltersWidget::Section;
+    m_transferListFiltersWidget->setSectionVisible(Section::Status, m_storeStatusSectionVisible.get(true));
+    m_transferListFiltersWidget->setSectionVisible(Section::Categories, m_storeCategoriesSectionVisible.get(true));
+    m_transferListFiltersWidget->setSectionVisible(Section::Tags, m_storeTagsSectionVisible.get(true));
+    m_transferListFiltersWidget->setSectionVisible(Section::Trackers, m_storeTrackersSectionVisible.get(true));
+}
+
+void MainWindow::on_actionShowStatusFilter_triggered(const bool checked)
+{
+    m_storeStatusSectionVisible = checked;
+    if (m_transferListFiltersWidget)
+        m_transferListFiltersWidget->setSectionVisible(TransferListFiltersWidget::Section::Status, checked);
+}
+
+void MainWindow::on_actionShowCategoriesFilter_triggered(const bool checked)
+{
+    m_storeCategoriesSectionVisible = checked;
+    if (m_transferListFiltersWidget)
+        m_transferListFiltersWidget->setSectionVisible(TransferListFiltersWidget::Section::Categories, checked);
+}
+
+void MainWindow::on_actionShowTagsFilter_triggered(const bool checked)
+{
+    m_storeTagsSectionVisible = checked;
+    if (m_transferListFiltersWidget)
+        m_transferListFiltersWidget->setSectionVisible(TransferListFiltersWidget::Section::Tags, checked);
+}
+
+void MainWindow::on_actionShowTrackersFilter_triggered(const bool checked)
+{
+    m_storeTrackersSectionVisible = checked;
+    if (m_transferListFiltersWidget)
+        m_transferListFiltersWidget->setSectionVisible(TransferListFiltersWidget::Section::Trackers, checked);
 }
 
 void MainWindow::positionSpeedGraph()

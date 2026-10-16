@@ -118,6 +118,14 @@
     <addaction name="actionSpeedInTitleBar"/>
     <addaction name="actionCompactRows"/>
     <addaction name="actionShowSpeedGraph"/>
+    <addaction name="actionShowFilterBar"/>
+    <addaction name="actionShowDetailsPanel"/>
+    <addaction name="actionShowTabBar"/>
+    <addaction name="separator"/>
+    <addaction name="actionShowStatusFilter"/>
+    <addaction name="actionShowCategoriesFilter"/>
+    <addaction name="actionShowTagsFilter"/>
+    <addaction name="actionShowTrackersFilter"/>
     <addaction name="separator"/>
     <addaction name="actionSearchWidget"/>
     <addaction name="actionRSSReader"/>
@@ -362,6 +370,83 @@
    </property>
    <property name="toolTip">
     <string>Show the floating speed graph over the torrent list</string>
+   </property>
+  </action>
+  <action name="actionShowFilterBar">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Search &amp;Filter Bar</string>
+   </property>
+   <property name="toolTip">
+    <string>Show the search/filter bar above the torrent list</string>
+   </property>
+  </action>
+  <action name="actionShowDetailsPanel">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Deta&amp;ils Panel</string>
+   </property>
+   <property name="toolTip">
+    <string>Show the properties/details panel below the torrent list</string>
+   </property>
+  </action>
+  <action name="actionShowTabBar">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Ta&amp;b Bar</string>
+   </property>
+   <property name="toolTip">
+    <string>Show the tab bar (Transfers / Search / RSS)</string>
+   </property>
+  </action>
+  <action name="actionShowStatusFilter">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Sidebar: St&amp;atus</string>
+   </property>
+   <property name="toolTip">
+    <string>Show the Status section in the filters sidebar</string>
+   </property>
+  </action>
+  <action name="actionShowCategoriesFilter">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Sidebar: Cate&amp;gories</string>
+   </property>
+   <property name="toolTip">
+    <string>Show the Categories section in the filters sidebar</string>
+   </property>
+  </action>
+  <action name="actionShowTagsFilter">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Sidebar: Ta&amp;gs</string>
+   </property>
+   <property name="toolTip">
+    <string>Show the Tags section in the filters sidebar</string>
+   </property>
+  </action>
+  <action name="actionShowTrackersFilter">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Sidebar: Trac&amp;kers</string>
+   </property>
+   <property name="toolTip">
+    <string>Show the Trackers section in the filters sidebar</string>
    </property>
   </action>
   <action name="actionRSSReader">

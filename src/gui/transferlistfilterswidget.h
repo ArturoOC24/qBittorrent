@@ -33,6 +33,7 @@
 #include <QWidget>
 
 class TrackersFilterWidget;
+class TransferListFiltersWidgetItem;
 class TransferListWidget;
 
 namespace BitTorrent
@@ -47,11 +48,26 @@ class TransferListFiltersWidget final : public QWidget
     Q_DISABLE_COPY_MOVE(TransferListFiltersWidget)
 
 public:
+    enum class Section
+    {
+        Status,
+        Categories,
+        Tags,
+        Trackers
+    };
+
     TransferListFiltersWidget(QWidget *parent, TransferListWidget *transferList, bool downloadFavicon);
     void setDownloadTrackerFavicon(bool value);
+
+    void setSectionVisible(Section section, bool visible);
+    bool isSectionVisible(Section section) const;
 
 private:
     TransferListWidget *m_transferList = nullptr;
     TrackersFilterWidget *m_trackersFilterWidget = nullptr;
+    TransferListFiltersWidgetItem *m_statusItem = nullptr;
+    TransferListFiltersWidgetItem *m_categoryItem = nullptr;
+    TransferListFiltersWidgetItem *m_tagItem = nullptr;
+    TransferListFiltersWidgetItem *m_trackersItem = nullptr;
     bool m_useSeparateTrackerStatusFilter = false;
 };

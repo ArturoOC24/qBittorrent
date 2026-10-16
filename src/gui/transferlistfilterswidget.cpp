@@ -67,6 +67,7 @@ TransferListFiltersWidget::TransferListFiltersWidget(QWidget *parent, TransferLi
     {
         auto *statusFilterWidget = new StatusFilterWidget(this, transferList);
         auto *item = new TransferListFiltersWidgetItem(tr("Status"), statusFilterWidget, this);
+        m_statusItem = item;
         item->setChecked(pref->getStatusFilterState());
         connect(item, &TransferListFiltersWidgetItem::toggled, statusFilterWidget, &StatusFilterWidget::toggleFilter);
         connect(item, &TransferListFiltersWidgetItem::toggled, pref, &Preferences::setStatusFilterState);
@@ -88,6 +89,7 @@ TransferListFiltersWidget::TransferListFiltersWidget(QWidget *parent, TransferLi
                 , transferList, &TransferListWidget::applyCategoryFilter);
 
         auto *item = new TransferListFiltersWidgetItem(tr("Categories"), categoryFilterWidget, this);
+        m_categoryItem = item;
         item->setChecked(pref->getCategoryFilterState());
         connect(item, &TransferListFiltersWidgetItem::toggled, this, [this, categoryFilterWidget](const bool enabled)
         {
@@ -111,6 +113,7 @@ TransferListFiltersWidget::TransferListFiltersWidget(QWidget *parent, TransferLi
                 , transferList, &TransferListWidget::applyTagFilter);
 
         auto *item = new TransferListFiltersWidgetItem(tr("Tags"), tagFilterWidget, this);
+        m_tagItem = item;
         item->setChecked(pref->getTagFilterState());
         connect(item, &TransferListFiltersWidgetItem::toggled, this, [this, tagFilterWidget](const bool enabled)
         {
@@ -126,6 +129,7 @@ TransferListFiltersWidget::TransferListFiltersWidget(QWidget *parent, TransferLi
         m_trackersFilterWidget = new TrackersFilterWidget(this, transferList, downloadFavicon);
 
         auto *item = new TransferListFiltersWidgetItem(tr("Trackers"), m_trackersFilterWidget, this);
+        m_trackersItem = item;
         item->setChecked(pref->getTrackerFilterState());
         connect(item, &TransferListFiltersWidgetItem::toggled, m_trackersFilterWidget, &TrackersFilterWidget::toggleFilter);
         connect(item, &TransferListFiltersWidgetItem::toggled, pref, &Preferences::setTrackerFilterState);
@@ -181,4 +185,28 @@ TransferListFiltersWidget::TransferListFiltersWidget(QWidget *parent, TransferLi
 void TransferListFiltersWidget::setDownloadTrackerFavicon(bool value)
 {
     m_trackersFilterWidget->setDownloadTrackerFavicon(value);
+}
+
+static QWidget *sectionItemOf(const TransferListFiltersWidget::Section section, QWidget *status, QWidget *category, QWidget *tag, QWidget *trackers)
+{
+    switch (section)
+    {
+    case TransferListFiltersWidget::Section::Status: return status;
+    case TransferListFiltersWidget::Section::Categories: return category;
+    case TransferListFiltersWidget::Section::Tags: return tag;
+    case TransferListFiltersWidget::Section::Trackers: return trackers;
+    }
+    return nullptr;
+}
+
+void TransferListFiltersWidget::setSectionVisible(const Section section, const bool visible)
+{
+    if (QWidget *item = sectionItemOf(section, m_statusItem, m_categoryItem, m_tagItem, m_trackersItem))
+        item->setVisible(visible);
+}
+
+bool TransferListFiltersWidget::isSectionVisible(const Section section) const
+{
+    const QWidget *item = sectionItemOf(section, m_statusItem, m_categoryItem, m_tagItem, m_trackersItem);
+    return item && item->isVisible();
 }

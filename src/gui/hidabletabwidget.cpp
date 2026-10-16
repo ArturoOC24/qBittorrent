@@ -57,9 +57,15 @@ void HidableTabWidget::tabRemoved(const int index)
 void HidableTabWidget::tabsCountChanged()
 {
     const qsizetype tabsCount = count();
-    tabBar()->setVisible(tabsCount != 1);
+    tabBar()->setVisible(!m_tabBarForcedHidden && (tabsCount != 1));
     // Skip single tab in keyboard navigation (no point navigating to it)
     tabBar()->setFocusPolicy((tabsCount > 1) ? Qt::StrongFocus : Qt::NoFocus);
+}
+
+void HidableTabWidget::setTabBarForcedHidden(const bool hidden)
+{
+    m_tabBarForcedHidden = hidden;
+    tabsCountChanged();
 }
 
 #ifdef Q_OS_MACOS

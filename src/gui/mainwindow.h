@@ -161,6 +161,13 @@ private slots:
     void on_actionSpeedInTitleBar_triggered();
     void on_actionCompactRows_triggered(bool checked);
     void on_actionShowSpeedGraph_triggered(bool checked);
+    void on_actionShowFilterBar_triggered(bool checked);
+    void on_actionShowDetailsPanel_triggered(bool checked);
+    void on_actionShowTabBar_triggered(bool checked);
+    void on_actionShowStatusFilter_triggered(bool checked);
+    void on_actionShowCategoriesFilter_triggered(bool checked);
+    void on_actionShowTagsFilter_triggered(bool checked);
+    void on_actionShowTrackersFilter_triggered(bool checked);
     void on_actionTopToolBar_triggered();
     void on_actionShowStatusbar_triggered();
     void on_actionShowFiltersSidebar_triggered(bool checked);
@@ -217,6 +224,7 @@ private:
     void createTorrentTriggered(const Path &path);
     void showStatusBar(bool show);
     void showFiltersSidebar(bool show);
+    void applyFilterSectionVisibility();
     void applyTransferListFilter();
     void refreshWindowTitle();
     void refreshTrayIconTooltip();
@@ -272,6 +280,7 @@ private:
     QAction *m_queueSeparatorMenu = nullptr;
     QSplitter *m_splitter = nullptr;
     QWidget *m_transfersTab = nullptr;
+    QWidget *m_filterBar = nullptr;
     QPointer<SearchWidget> m_searchWidget;
     QPointer<RSSWidget> m_rssWidget;
     QPointer<ExecutionLogWidget> m_executionLog;
@@ -284,6 +293,12 @@ private:
     SettingValue<bool> m_storeDownloadTrackerFavicon;
     SettingValue<bool> m_storeCompactRows;
     SettingValue<bool> m_storeSpeedGraphVisible;
+    SettingValue<bool> m_storeFilterBarVisible;
+    SettingValue<bool> m_storeTabBarVisible;
+    SettingValue<bool> m_storeStatusSectionVisible;
+    SettingValue<bool> m_storeCategoriesSectionVisible;
+    SettingValue<bool> m_storeTagsSectionVisible;
+    SettingValue<bool> m_storeTrackersSectionVisible;
 
     SpeedGraphWidget *m_speedGraph = nullptr;
     CachedSettingValue<Log::MsgTypes> m_storeExecutionLogTypes;

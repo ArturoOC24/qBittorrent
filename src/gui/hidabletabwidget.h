@@ -39,10 +39,15 @@ class HidableTabWidget final : public QTabWidget
 public:
     explicit HidableTabWidget(QWidget *parent = nullptr);
 
+    // When forced hidden, the tab bar stays hidden regardless of tab count.
+    void setTabBarForcedHidden(bool hidden);
+
 private:
     void tabInserted(int index) override;
     void tabRemoved(int index) override;
     void tabsCountChanged();
+
+    bool m_tabBarForcedHidden = false;
 
 #ifdef Q_OS_MACOS
     void paintEvent(QPaintEvent *event) override;
