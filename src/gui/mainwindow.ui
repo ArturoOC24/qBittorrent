@@ -309,10 +309,10 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>&amp;Top Toolbar</string>
+    <string>&amp;Toolbar</string>
    </property>
    <property name="toolTip">
-    <string>Display Top Toolbar</string>
+    <string>Display Toolbar</string>
    </property>
   </action>
   <action name="actionShowStatusbar">
